@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>韋宏Ｂ招募活動</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Orbitron:wght@700;900&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a14;--sur:#12121f;--card:#1a1a2e;--bdr:#2a2a4a;--acc:#f5a623;--acc2:#a855f7;--acc3:#22d3ee;--red:#e74c3c;--grn:#2ecc71;--txt:#e8e8f0;--mut:#6b6b8a;--fh:'Orbitron',sans-serif;--fb:'Noto Sans TC',sans-serif}
+body{background:var(--bg);color:var(--txt);font-family:var(--fb);min-height:100vh}
+#app{min-height:100vh;position:relative}
+.bg-grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(168,85,247,.04)1px,transparent 1px),linear-gradient(90deg,rgba(168,85,247,.04)1px,transparent 1px);background-size:40px 40px;pointer-events:none}
+.hero{position:relative;z-index:1;text-align:center;padding:48px 20px 32px;background:linear-gradient(180deg,rgba(168,85,247,.15),transparent);border-bottom:1px solid var(--bdr)}
+.hero-badge{display:inline-block;background:rgba(245,166,35,.15);border:1px solid rgba(245,166,35,.4);color:var(--acc);padding:4px 16px;border-radius:999px;font-size:12px;font-family:var(--fh);letter-spacing:2px;margin-bottom:16px}
+.hero-title{font-family:var(--fh);font-size:clamp(26px,6vw,48px);font-weight:900;line-height:1.2;background:linear-gradient(135deg,#f5a623,#f0532a,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px}
+.hero-desc{color:var(--mut);font-size:14px;margin-bottom:16px}
+.hero-day{margin-top:8px;font-family:var(--fh);font-size:13px;color:var(--acc3)}
+.tabs{position:relative;z-index:1;display:flex;border-bottom:1px solid var(--bdr);background:var(--sur)}
+.tab{flex:1;padding:14px 8px;background:none;border:none;color:var(--mut);font-family:var(--fb);font-size:14px;cursor:pointer;border-bottom:2px solid transparent}
+.tab.on{color:var(--acc);border-bottom-color:var(--acc)}
+.main{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:24px 16px 80px}
+.panel{background:var(--card);border:1px solid var(--bdr);border-radius:16px;padding:24px}
+.ptitle{font-family:var(--fh);font-size:18px;color:var(--acc);margin-bottom:20px}
+.dbadge{background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.3);color:var(--acc3);padding:8px 14px;border-radius:8px;font-size:13px;margin-bottom:20px;display:inline-block}
+.flabel{display:block;font-size:13px;color:var(--mut);margin-bottom:8px;font-weight:700}
+.sel{width:100%;padding:12px 14px;background:var(--sur);border:1px solid var(--bdr);border-radius:10px;color:var(--txt);font-family:var(--fb);font-size:15px;outline:none}
+.sel.sm{width:auto;min-width:130px;font-size:13px;padding:8px 12px}
+.sel:focus{border-color:var(--acc2)}
+.sel:disabled{opacity:.4;cursor:not-allowed}
+.done-msg{background:rgba(46,204,113,.12);border:1px solid rgba(46,204,113,.3);color:var(--grn);padding:14px;border-radius:10px;font-size:14px;text-align:center}
+.task-list{display:flex;flex-direction:column;gap:14px;margin-bottom:20px}
+.task-item{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:16px;display:flex;align-items:center;gap:14px}
+.task-icon{font-size:28px;flex-shrink:0}
+.task-info{flex:1}
+.task-name{font-weight:700;font-size:14px;margin-bottom:4px}
+.task-goal{font-size:11px;color:var(--mut)}
+.task-check{flex-shrink:0}
+.chk-btn{width:44px;height:44px;border-radius:50%;border:2px solid var(--bdr);background:var(--sur);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;color:var(--mut);transition:all .2s}
+.chk-btn.on{background:var(--grn);border-color:var(--grn);color:#fff}
+.task-photo-box{width:64px;height:64px;border-radius:10px;border:2px dashed var(--bdr);background:var(--sur);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;position:relative}
+.task-photo-box.has{border-style:solid;border-color:var(--grn)}
+.task-photo-box img{width:100%;height:100%;object-fit:cover}
+.task-photo-ic{font-size:22px;color:var(--mut)}
+.task-photo-rm{position:absolute;top:1px;right:1px;background:rgba(0,0,0,.6);border:none;border-radius:50%;color:#fff;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:18px}
+.hint{font-size:12px;color:var(--mut);margin-bottom:20px;padding:10px 12px;background:rgba(255,255,255,.03);border-radius:8px;border-left:3px solid var(--acc2)}
+.sbtn{width:100%;padding:16px;background:linear-gradient(135deg,var(--acc),#f0532a);border:none;border-radius:12px;color:#fff;font-family:var(--fh);font-size:16px;font-weight:700;cursor:pointer}
+.sbtn:disabled{opacity:.5;cursor:not-allowed}
+.msg{margin-top:12px;padding:12px 16px;border-radius:10px;font-size:14px;text-align:center}
+.msg.ok{background:rgba(46,204,113,.12);color:var(--grn);border:1px solid rgba(46,204,113,.3)}
+.msg.err{background:rgba(231,76,60,.12);color:var(--red);border:1px solid rgba(231,76,60,.3)}
+.pbar-track{background:rgba(255,255,255,.06);border-radius:999px;height:14px;position:relative;overflow:hidden}
+.pbar-fill{height:100%;border-radius:999px;transition:width 1s}
+.pbar-pct{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;color:#fff;font-weight:700}
+.slbl{font-size:14px;font-weight:700;color:var(--mut);margin-bottom:12px}
+.cblock{background:rgba(255,255,255,.02);border:1px solid var(--bdr);border-radius:14px;padding:20px;margin-bottom:20px}
+.chead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.cname{font-family:var(--fh);font-size:16px;color:var(--acc2)}
+.cpct{font-size:14px;color:var(--acc);font-weight:700;background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3);padding:4px 12px;border-radius:20px}
+.alogin{display:flex;flex-direction:column;gap:12px;max-width:320px}
+.astats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.astat{background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:16px;text-align:center}
+.astat-n{font-family:var(--fh);font-size:28px;color:var(--acc)}
+.astat-l{font-size:12px;color:var(--mut);margin-top:4px}
+.amem{background:var(--sur);border:1px solid var(--bdr);border-radius:10px;margin-bottom:10px;overflow:hidden}
+.amem summary{padding:12px 16px;cursor:pointer;font-weight:700;list-style:none;display:flex;align-items:center;gap:8px}
+.amem summary::-webkit-details-marker{display:none}
+.atag{font-size:11px;color:var(--mut);font-weight:400}
+.acnt{margin-left:auto;font-size:12px;color:var(--acc3);background:rgba(34,211,238,.1);padding:2px 8px;border-radius:6px}
+.aday{padding:12px 16px;border-top:1px solid var(--bdr);font-size:13px}
+.aday-row{display:flex;align-items:center;gap:8px;color:var(--mut);margin-bottom:8px;flex-wrap:wrap}
+.dbtn{margin-left:auto;background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:var(--red);padding:3px 10px;border-radius:6px;font-size:11px;cursor:pointer}
+.task-tags{display:flex;flex-wrap:wrap;gap:6px}
+.task-tag{font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(34,211,238,.1);color:var(--acc3);border:1px solid rgba(34,211,238,.25)}
+.move-sec{background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.2);border-radius:12px;padding:16px;margin-bottom:20px}
+.move-grid{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:12px}
+.move-grid>div{display:flex;flex-direction:column;gap:6px}
+.mbtn{padding:9px 20px;background:linear-gradient(135deg,var(--acc),#f0532a);border:none;border-radius:8px;color:#fff;font-family:var(--fb);font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+footer{position:relative;z-index:1;text-align:center;padding:20px;font-size:12px;color:var(--mut);border-top:1px solid var(--bdr)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyCrgMfdn79JOKx4XKA4hNwNZkhNACoizT4",
+  authDomain:"restart-challenge-2026.firebaseapp.com",
+  databaseURL:"https://restart-challenge-2026-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"restart-challenge-2026",
+  storageBucket:"restart-challenge-2026.firebasestorage.app",
+  messagingSenderId:"477447792834",
+  appId:"1:477447792834:web:c657ca4d3e612d1ccf335b"
+});
+// 韋宏Ｂ招募活動：用同一個 Firebase 專案，資料路徑前綴 weihong2/ 避免跟其他活動衝突
+var DB = firebase.database().ref("weihong2");
+var ADMIN_PW = "jimmy0117";
+var A_START = "2026-07-03";
+var A_END   = "2026-07-30";
+var TOTAL_DAYS = 28;
+
+// 任務定義：天數型任務（要做到N天/N次）
+var TASKS = [
+  {key:"join",  icon:"👥", name:"入群1位",       goal:21, unit:"天", totalDays:28},
+  {key:"bv",    icon:"🧪", name:"BV試用分享",     goal:21, unit:"天", totalDays:28},
+  {key:"link",  icon:"🔗", name:"強連結",         goal:4,  unit:"次", totalDays:28},
+  {key:"script",icon:"🎬", name:"跑劇本",         goal:4,  unit:"次", totalDays:28},
+];
+// 香綺大C 專屬額外任務
+var EXTRA_TASK_FOR = "香綺大C";
+var EXTRA_TASK = {key:"close", icon:"🤝", name:"跟進或締結", goal:4, unit:"次", totalDays:28, noGoal:true};
+
+// 隨機生成的範例資料（先佔位，之後可由管理員調整或你提供正式名單後我直接改）
+var DEFAULT_DATA = {
+  "香綺大C": {
+    "演示隊A": ["示範一","示範二","示範三"],
+    "演示隊B": ["示範四","示範五","示範六"]
+  },
+  "子林大C": {
+    "演示隊C": ["示範七","示範八","示範九"],
+    "演示隊D": ["示範十","示範十一","示範十二"]
+  },
+  "婷芝大C": {
+    "演示隊E": ["示範十三","示範十四","示範十五"],
+    "演示隊F": ["示範十六","示範十七","示範十八"]
+  }
+};
+
+// ══════════════════════════════════════
+// 演示用：預先灌入不同完成度的打卡紀錄
+// 演示隊A=100% 演示隊B=50% 演示隊C=30% 演示隊D=70% 演示隊E=90% 演示隊F=80%
+// 邏輯：每人在每個任務上，依目標天數/次數 × 完成度比例，回填對應天數的紀錄
+// ══════════════════════════════════════
+var DEMO_PCTS = {
+  "演示隊A": 1.0, "演示隊B": 0.5, "演示隊C": 0.3,
+  "演示隊D": 0.7, "演示隊E": 0.9, "演示隊F": 0.8
+};
+var TINY_PHOTO = "data:image/svg+xml;base64,"+btoa('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="%23222"/><text x="20" y="24" font-size="20" text-anchor="middle" fill="%23fff">📷</text></svg>');
+
+function buildDemoRecords(){
+  var recs = {};
+  Object.keys(DEFAULT_DATA).forEach(function(bigC){
+    Object.keys(DEFAULT_DATA[bigC]).forEach(function(team){
+      var pct = DEMO_PCTS[team];
+      if(pct===undefined) return;
+      DEFAULT_DATA[bigC][team].forEach(function(name){
+        var pk = bigC+"|"+team+"|"+name;
+        var tasks = (bigC==="香綺大C") ? TASKS.concat([EXTRA_TASK]) : TASKS;
+        recs[pk] = recs[pk] || {};
+        // 計算每個任務要完成幾天/次，依完成度比例
+        var perTaskCount = {};
+        tasks.forEach(function(t){
+          perTaskCount[t.key] = Math.round(t.goal * pct);
+        });
+        var maxCount = Math.max.apply(null, Object.values(perTaskCount));
+        for(var i=0;i<maxCount;i++){
+          var d = new Date("2026-07-03");
+          d.setDate(d.getDate()+i);
+          var dateStr = d.toISOString().split("T")[0];
+          var dayData = {ts:new Date().toISOString()};
+          tasks.forEach(function(t){
+            if(i < perTaskCount[t.key]) dayData[t.key] = TINY_PHOTO;
+          });
+          recs[pk][dateStr] = dayData;
+        }
+      });
+    });
+  });
+  return recs;
+}
+
+function twToday(){
+  var tw=new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Taipei"}));
+  return tw.getFullYear()+"-"+pad(tw.getMonth()+1)+"-"+pad(tw.getDate());
+}
+function pad(n){return String(n).padStart(2,"0");}
+function actDay(){
+  var tw=new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Taipei"}));
+  var d=Math.floor((tw-new Date(A_START+"T00:00:00"))/86400000);
+  return(d>=0&&d<TOTAL_DAYS)?d+1:null;
+}
+
+var S={tab:"submit",data:{},records:{},adminOk:false,
+  cBig:"",cTeam:"",cName:"",
+  photos:{},smsg:"",busy:false,
+  et:{cBig:"",cTeam:"",name:"",from:"",to:""},emsg:""};
+
+var DATA_VERSION="v1";
+DB.child("data_version").once("value",function(vs){
+  if(vs.val()!==DATA_VERSION){
+    DB.child("data").set(DEFAULT_DATA);
+    DB.child("data_version").set(DATA_VERSION);
+  }
+});
+DB.child("data").on("value",function(s){
+  var val=s.val();
+  if(!val||Object.keys(val).length===0){
+    DB.child("data").set(DEFAULT_DATA);
+  }else{
+    S.data=val;R();
+  }
+});
+DB.child("records").once("value",function(rs){
+  var existing = rs.val();
+  if(!existing || Object.keys(existing).length===0){
+    // 第一次載入：灌入演示資料
+    DB.child("records").set(buildDemoRecords());
+  }
+});
+DB.child("records").on("value",function(s){S.records=s.val()||{};R();});
+
+// 取得所有大C
+function bigCs(){return Object.keys(S.data);}
+// 取得某大C的隊伍
+function teamsOf(bigC){return S.data[bigC]?Object.keys(S.data[bigC]):[];}
+// 取得某大C某隊的成員
+function membersOf(bigC,team){return (S.data[bigC]&&S.data[bigC][team])||[];}
+// 取得某人適用的任務（香綺大C多一項）
+function tasksFor(bigC){
+  return bigC===EXTRA_TASK_FOR ? TASKS.concat([EXTRA_TASK]) : TASKS;
+}
+// key 用人名（假設同名不重複；若需要可改成 bigC/team/name 組合）
+function personKey(bigC,team,name){return bigC+"|"+team+"|"+name;}
+
+// 計算某人某任務累積次數（不限定當天）
+function taskCount(bigC,team,name,taskKey){
+  var pk=personKey(bigC,team,name);
+  var rec=S.records[pk]||{};
+  var cnt=0;
+  Object.keys(rec).forEach(function(date){
+    if(date<A_START||date>A_END)return;
+    var day=rec[date];
+    if(day&&day[taskKey])cnt++;
+  });
+  return cnt;
+}
+// 個人整體完成率（所有任務平均達標%）
+function personPct(bigC,team,name){
+  var tasks=tasksFor(bigC);
+  var sum=0;
+  tasks.forEach(function(t){
+    var c=taskCount(bigC,team,name,t.key);
+    sum+=Math.min(c/t.goal,1);
+  });
+  return (sum/tasks.length)*100;
+}
+// 大C整體完成率（旗下所有人平均）
+function bigCPct(bigC){
+  var teams=teamsOf(bigC);
+  var all=[];
+  teams.forEach(function(t){membersOf(bigC,t).forEach(function(m){all.push({team:t,name:m});});});
+  if(!all.length)return 0;
+  var sum=all.reduce(function(x,p){return x+personPct(bigC,p.team,p.name);},0);
+  return sum/all.length;
+}
+
+// 提交
+async function doSubmit(){
+  var today=twToday();
+  if(!S.cBig||!S.cTeam||!S.cName)return sm("⚠️ 請選擇大C、隊伍、姓名");
+  var pk=personKey(S.cBig,S.cTeam,S.cName);
+  if(S.records[pk]&&S.records[pk][today])return sm("⚠️ 今天已提交過囉！");
+  var tasks=tasksFor(S.cBig);
+  var anyPhoto=tasks.some(function(t){return S.photos[t.key];});
+  if(!anyPhoto)return sm("⚠️ 請至少上傳一項今天完成任務的照片");
+  S.busy=true;R();
+  try{
+    var dayData={ts:new Date().toISOString()};
+    tasks.forEach(function(t){
+      if(S.photos[t.key]) dayData[t.key]=S.photos[t.key]; // 本地版：直接存 base64 字串；正式版會改存雲端網址
+    });
+    await DB.child("records/"+pk+"/"+today).set(dayData);
+    S.photos={};
+    sm("🎉 今日任務已記錄！");
+  }catch(e){sm("❌ 失敗："+e.message);}
+  S.busy=false;R();
+}
+function sm(m){S.smsg=m;R();}
+
+// 管理員：移動日期
+async function doMove(){
+  var bigC=S.et.cBig,team=S.et.cTeam,name=S.et.name,f=S.et.from,t=S.et.to;
+  if(!bigC||!team||!name||!f||!t)return em("⚠️ 請填寫完整欄位");
+  if(f===t)return em("⚠️ 來源與目標日期相同");
+  var pk=personKey(bigC,team,name);
+  var rec=(S.records[pk]||{})[f];
+  if(!rec)return em("⚠️ 該成員在來源日期沒有紀錄");
+  if((S.records[pk]||{})[t])return em("⚠️ 目標日期已有紀錄");
+  await DB.child("records/"+pk+"/"+t).set(Object.assign({},rec,{adminMoved:true}));
+  await DB.child("records/"+pk+"/"+f).remove();
+  em("✅ 已將 "+name+" 的 "+f+" 移至 "+t);
+  S.et={cBig:"",cTeam:"",name:"",from:"",to:""};
+}
+function em(m){S.emsg=m;R();}
+
+async function delRec(pk,date){
+  await DB.child("records/"+pk+"/"+date).remove();
+}
+
+function doLogin(){
+  var el=document.getElementById("pwIn");
+  var pw=el?el.value:"";
+  if(pw===ADMIN_PW){S.adminOk=true;R();}
+  else alert("密碼錯誤");
+}
+
+// ══ RENDER ══
+function R(){document.getElementById("app").innerHTML=html();bind();}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+function html(){
+  var today=twToday(),day=actDay();
+  var h='<div class="bg-grid"></div>';
+  h+='<header class="hero">';
+  h+='<div class="hero-badge">⚔️ 招募挑戰</div>';
+  h+='<h1 class="hero-title">韋宏Ｂ招募活動</h1>';
+  h+='<p class="hero-desc">7/3 – 7/30｜入群・BV試用・強連結・跑劇本</p>';
+  h+='<div class="hero-day">'+(day?'🗡️ 活動第 '+day+' 天 / '+TOTAL_DAYS+' 天':'活動期間：7/3 – 7/30')+'</div>';
+  h+='</header>';
+  h+='<nav class="tabs">';
+  [{k:"submit",l:"⚔️ 提交任務"},{k:"view",l:"📊 查看進度"},{k:"admin",l:"🔑 管理員"}].forEach(function(t){
+    h+='<button class="tab'+(S.tab===t.k?" on":"")+'" id="tab_'+t.k+'">'+t.l+'</button>';
+  });
+  h+='</nav><main class="main">';
+  if(S.tab==="submit")h+=htmlSubmit(today);
+  else if(S.tab==="view")h+=htmlView();
+  else h+=htmlAdmin();
+  h+='</main><footer>韋宏Ｂ招募活動 ⚔️</footer>';
+  return h;
+}
+
+function htmlSubmit(today){
+  var pk=S.cBig&&S.cTeam&&S.cName?personKey(S.cBig,S.cTeam,S.cName):null;
+  var already=pk&&S.records[pk]&&S.records[pk][today];
+
+  var h='<div class="panel"><div class="ptitle">⚔️ 今日任務提交</div>';
+  h+='<div class="dbadge">📅 台灣時間今日：'+today+'</div>';
+
+  // 第一層：大C
+  h+='<div style="margin-bottom:16px"><label class="flabel">選擇大Ｃ</label>';
+  h+='<select class="sel" id="selBig"><option value="">── 請選擇 ──</option>';
+  bigCs().forEach(function(b){h+='<option value="'+esc(b)+'"'+(b===S.cBig?' selected':'')+'>'+esc(b)+'</option>';});
+  h+='</select></div>';
+
+  // 第二層：隊伍
+  h+='<div style="margin-bottom:16px"><label class="flabel">選擇隊伍</label>';
+  h+='<select class="sel" id="selTeam"'+(!S.cBig?' disabled':'')+'><option value="">── 請選擇 ──</option>';
+  if(S.cBig)teamsOf(S.cBig).forEach(function(t){h+='<option value="'+esc(t)+'"'+(t===S.cTeam?' selected':'')+'>'+esc(t)+'</option>';});
+  h+='</select></div>';
+
+  // 第三層：姓名
+  h+='<div style="margin-bottom:20px"><label class="flabel">選擇你的名字</label>';
+  h+='<select class="sel" id="selName"'+(!S.cTeam?' disabled':'')+'><option value="">── 請選擇 ──</option>';
+  if(S.cBig&&S.cTeam)membersOf(S.cBig,S.cTeam).forEach(function(m){h+='<option value="'+esc(m)+'"'+(m===S.cName?' selected':'')+'>'+esc(m)+'</option>';});
+  h+='</select></div>';
+
+  if(pk&&already){
+    h+='<div class="done-msg">✅ '+esc(S.cName)+' 今天已提交過囉！明天再來繼續累積天數💪</div>';
+  } else if(pk){
+    var tasks=tasksFor(S.cBig);
+    h+='<div class="task-list">';
+    tasks.forEach(function(t){
+      var cnt=taskCount(S.cBig,S.cTeam,S.cName,t.key);
+      var photo=S.photos[t.key];
+      h+='<div class="task-item">';
+      h+='<div class="task-icon">'+t.icon+'</div>';
+      h+='<div class="task-info"><div class="task-name">'+t.name+'</div>';
+      h+=t.noGoal
+        ? '<div class="task-goal">目前累積：'+cnt+t.unit+'</div></div>'
+        : '<div class="task-goal">目標：'+t.goal+t.unit+'　目前累積：'+cnt+t.unit+'</div></div>';
+      h+='<div class="task-check">';
+      if(photo){
+        h+='<div class="task-photo-box has" id="pb_'+t.key+'">';
+        h+='<img src="'+photo+'">';
+        h+='<button class="task-photo-rm" data-rmphoto="'+t.key+'">✕</button>';
+        h+='</div>';
+      }else{
+        h+='<div class="task-photo-box" id="pb_'+t.key+'" data-uploadbox="'+t.key+'">';
+        h+='<span class="task-photo-ic">📷</span>';
+        h+='</div>';
+        h+='<input type="file" id="fi_'+t.key+'" accept="image/*" style="display:none">';
+      }
+      h+='</div></div>';
+    });
+    h+='</div>';
+    h+='<div class="hint">💡 做了哪個任務就上傳那項照片（每項限1張），沒做的不用傳。至少要有一項才能送出。每天只能提交一次，過了台灣時間晚上 23:59:59 就算隔天。</div>';
+    h+='<button class="sbtn" id="submitBtn"'+(S.busy?' disabled':'')+'>'+(S.busy?'送出中...':'⚔️ 送出今日任務')+'</button>';
+    if(S.smsg)h+='<div class="msg '+(S.smsg.startsWith('🎉')?'ok':'err')+'">'+esc(S.smsg)+'</div>';
+  }
+  h+='</div>';
+  return h;
+}
+
+function htmlView(){
+  var bcs=bigCs();
+  if(!bcs.length)return '<div class="panel"><div class="ptitle">📊 查看進度</div><div style="color:var(--mut);text-align:center;padding:40px">尚未設定名單</div></div>';
+  var h='<div class="panel"><div class="ptitle">📊 三大Ｃ完成進度</div>';
+  bcs.forEach(function(b){
+    var pct=bigCPct(b);
+    var color=pct>=80?"#2ecc71":pct>=50?"#22d3ee":pct>=25?"#e67e22":"#e74c3c";
+    h+='<div class="cblock"><div class="chead">';
+    h+='<span class="cname">'+esc(b)+'</span><span class="cpct">'+Math.round(pct)+'%</span></div>';
+    h+='<div class="pbar-track"><div class="pbar-fill" style="width:'+pct+'%;background:'+color+'"></div>';
+    h+='<span class="pbar-pct">'+Math.round(pct)+'%</span></div></div>';
+  });
+  h+='</div>';
+  return h;
+}
+
+function htmlAdmin(){
+  if(!S.adminOk){
+    var h='<div class="panel"><div class="ptitle">🔑 管理員審核</div><div class="alogin">';
+    h+='<input type="password" class="sel" id="pwIn" placeholder="輸入管理員密碼">';
+    h+='<button class="sbtn" id="loginBtn">解鎖</button></div></div>';
+    return h;
+  }
+  var bcs=bigCs();
+  var allPeople=[];
+  bcs.forEach(function(b){teamsOf(b).forEach(function(t){membersOf(b,t).forEach(function(m){allPeople.push({big:b,team:t,name:m});});});});
+  var totalCI=0;
+  allPeople.forEach(function(p){
+    var pk=personKey(p.big,p.team,p.name);
+    var rec=S.records[pk]||{};
+    totalCI+=Object.keys(rec).filter(function(d){return d>=A_START&&d<=A_END;}).length;
+  });
+
+  var h='<div class="panel"><div class="ptitle">🔑 管理員審核</div>';
+  h+='<div class="astats">';
+  h+='<div class="astat"><div class="astat-n">'+allPeople.length+'</div><div class="astat-l">總人數</div></div>';
+  h+='<div class="astat"><div class="astat-n">'+totalCI+'</div><div class="astat-l">總打卡次數</div></div>';
+  h+='<div class="astat"><div class="astat-n">'+bcs.length+'</div><div class="astat-l">大Ｃ數</div></div>';
+  h+='</div>';
+
+  // 各大C進度
+  h+='<div class="slbl">📊 各大Ｃ完成率</div>';
+  bcs.forEach(function(b){
+    var pct=bigCPct(b);
+    h+='<div style="margin-bottom:10px"><div style="font-size:13px;margin-bottom:4px">'+esc(b)+'　'+Math.round(pct)+'%</div>';
+    h+='<div class="pbar-track" style="height:8px"><div class="pbar-fill" style="width:'+pct+'%;background:#22d3ee"></div></div></div>';
+  });
+
+  // 移動日期
+  var bigOpts='<option value="">請選擇</option>';
+  bcs.forEach(function(b){bigOpts+='<option value="'+esc(b)+'"'+(b===S.et.cBig?' selected':'')+'>'+esc(b)+'</option>';});
+  h+='<div class="move-sec"><div class="slbl">🗓️ 移動紀錄日期</div>';
+  h+='<div class="move-grid">';
+  h+='<div><div class="flabel">大Ｃ</div><select class="sel sm" id="etBig">'+bigOpts+'</select></div>';
+  h+='<div><div class="flabel">隊伍</div><select class="sel sm" id="etTeam"><option value="">請選擇</option>';
+  if(S.et.cBig)teamsOf(S.et.cBig).forEach(function(t){h+='<option value="'+esc(t)+'"'+(t===S.et.cTeam?' selected':'')+'>'+esc(t)+'</option>';});
+  h+='</select></div>';
+  h+='<div><div class="flabel">姓名</div><select class="sel sm" id="etName"><option value="">請選擇</option>';
+  if(S.et.cBig&&S.et.cTeam)membersOf(S.et.cBig,S.et.cTeam).forEach(function(m){h+='<option value="'+esc(m)+'"'+(m===S.et.name?' selected':'')+'>'+esc(m)+'</option>';});
+  h+='</select></div>';
+  h+='<div><div class="flabel">來源日期</div><input type="date" class="sel sm" id="etFrom" value="'+S.et.from+'"></div>';
+  h+='<div><div class="flabel">移至日期</div><input type="date" class="sel sm" id="etTo" value="'+S.et.to+'"></div>';
+  h+='<div style="justify-content:flex-end"><button class="mbtn" id="moveBtn">移動</button></div>';
+  h+='</div>';
+  if(S.emsg)h+='<div class="msg '+(S.emsg.startsWith('✅')?'ok':'err')+'" style="margin-top:8px">'+esc(S.emsg)+'</div>';
+  h+='</div>';
+
+  // 逐人審核
+  h+='<div class="slbl">📷 逐人審核</div>';
+  var hasAny=false;
+  allPeople.forEach(function(p){
+    var pk=personKey(p.big,p.team,p.name);
+    var rec=S.records[pk]||{};
+    var dates=Object.keys(rec).sort();
+    if(!dates.length)return;
+    hasAny=true;
+    var tasks=tasksFor(p.big);
+    h+='<details class="amem">';
+    h+='<summary>'+esc(p.name)+' <span class="atag">'+esc(p.big)+' / '+esc(p.team)+'</span><span class="acnt">'+dates.length+' 天</span></summary>';
+    dates.forEach(function(date){
+      var r=rec[date];
+      h+='<div class="aday"><div class="aday-row"><span>📅 '+date+'</span>';
+      if(r.adminMoved)h+='<span style="font-size:10px;color:var(--acc)">已移動</span>';
+      h+='<button class="dbtn" data-delrec-pk="'+esc(pk)+'" data-delrec-d="'+date+'">🗑️ 刪除</button></div>';
+      h+='<div class="task-tags">';
+      tasks.forEach(function(t){
+        if(r[t.key]){
+          h+='<a href="'+r[t.key]+'" target="_blank" class="task-tag" style="display:inline-flex;align-items:center;gap:4px;text-decoration:none">'+t.icon+' '+t.name+' 🔍</a>';
+        }
+      });
+      h+='</div></div>';
+    });
+    h+='</details>';
+  });
+  if(!hasAny)h+='<div style="color:var(--mut);font-size:13px;padding:20px 0">目前無人打卡</div>';
+  h+='</div>';
+  return h;
+}
+
+// ══ 事件綁定 ══
+function bind(){
+  ["submit","view","admin"].forEach(function(k){
+    var el=document.getElementById("tab_"+k);
+    if(el)el.addEventListener("click",function(){S.tab=k;R();});
+  });
+  var sb=document.getElementById("selBig");
+  if(sb)sb.addEventListener("change",function(){S.cBig=this.value;S.cTeam="";S.cName="";S.photos={};S.smsg="";R();});
+  var st=document.getElementById("selTeam");
+  if(st)st.addEventListener("change",function(){S.cTeam=this.value;S.cName="";S.photos={};S.smsg="";R();});
+  var sn=document.getElementById("selName");
+  if(sn)sn.addEventListener("change",function(){S.cName=this.value;S.photos={};S.smsg="";R();});
+  document.querySelectorAll("[data-uploadbox]").forEach(function(box){
+    box.addEventListener("click",function(){
+      var k=this.dataset.uploadbox;
+      var fi=document.getElementById("fi_"+k);
+      if(fi)fi.click();
+    });
+  });
+  document.querySelectorAll("input[id^='fi_']").forEach(function(fi){
+    var k=fi.id.replace("fi_","");
+    fi.addEventListener("change",function(){
+      var f=this.files[0];
+      if(!f)return;
+      var reader=new FileReader();
+      reader.onload=function(e){
+        S.photos[k]=e.target.result;
+        R();
+      };
+      reader.readAsDataURL(f);
+    });
+  });
+  document.querySelectorAll("[data-rmphoto]").forEach(function(btn){
+    btn.addEventListener("click",function(ev){
+      ev.stopPropagation();
+      var k=this.dataset.rmphoto;
+      delete S.photos[k];
+      R();
+    });
+  });
+  var subBtn=document.getElementById("submitBtn");
+  if(subBtn)subBtn.addEventListener("click",doSubmit);
+
+  var pw=document.getElementById("pwIn");
+  var lb=document.getElementById("loginBtn");
+  if(pw)pw.addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
+  if(lb)lb.addEventListener("click",doLogin);
+
+  var etBig=document.getElementById("etBig");
+  var etTeam=document.getElementById("etTeam");
+  var etName=document.getElementById("etName");
+  var etFrom=document.getElementById("etFrom");
+  var etTo=document.getElementById("etTo");
+  var moveBtn=document.getElementById("moveBtn");
+  if(etBig)etBig.addEventListener("change",function(){S.et.cBig=this.value;S.et.cTeam="";S.et.name="";R();});
+  if(etTeam)etTeam.addEventListener("change",function(){S.et.cTeam=this.value;S.et.name="";R();});
+  if(etName)etName.addEventListener("change",function(){S.et.name=this.value;});
+  if(etFrom)etFrom.addEventListener("change",function(){S.et.from=this.value;});
+  if(etTo)etTo.addEventListener("change",function(){S.et.to=this.value;});
+  if(moveBtn)moveBtn.addEventListener("click",doMove);
+
+  document.querySelectorAll("[data-delrec-pk]").forEach(function(btn){
+    btn.addEventListener("click",function(){delRec(this.dataset.delrecPk,this.dataset.delrecD);});
+  });
+}
+
+// 本地模擬版資料是同步載入的，不需要額外的載入畫面（上面的 DB.on 已經會立即 render 真正內容）
+</script>
+</body>
+</html>
