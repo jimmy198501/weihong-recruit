@@ -136,7 +136,7 @@ var DEMO_PCTS = {
   "演示隊A": 1.0, "演示隊B": 0.5, "演示隊C": 0.3,
   "演示隊D": 0.7, "演示隊E": 0.9, "演示隊F": 0.8
 };
-var TINY_PHOTO = "data:image/svg+xml;base64,"+btoa('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="%23222"/><text x="20" y="24" font-size="20" text-anchor="middle" fill="%23fff">📷</text></svg>');
+var TINY_PHOTO = "data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="#222"/><circle cx="20" cy="20" r="10" fill="#888"/></svg>');
 
 function buildDemoRecords(){
   var recs = {};
