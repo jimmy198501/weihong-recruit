@@ -128,27 +128,26 @@ var DEFAULT_DATA = {
 };
 
 // ══════════════════════════════════════
-// 演示用：預先灌入不同完成度的打卡紀錄
-// 演示隊A=100% 演示隊B=50% 演示隊C=30% 演示隊D=70% 演示隊E=90% 演示隊F=80%
-// 邏輯：每人在每個任務上，依目標天數/次數 × 完成度比例，回填對應天數的紀錄
+// 演示用：每個隊員隨機灌入不同完成度的打卡紀錄（方便測試排序與列表效果）
 // ══════════════════════════════════════
-var DEMO_PCTS = {
-  "演示隊A": 1.0, "演示隊B": 0.5, "演示隊C": 0.3,
-  "演示隊D": 0.7, "演示隊E": 0.9, "演示隊F": 0.8
-};
 var TINY_PHOTO = "data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="#222"/><circle cx="20" cy="20" r="10" fill="#888"/></svg>');
+
+// 簡單的偽隨機（用字串 hash 當種子，確保同一人每次重整看到的數字一致，避免demo資料每次重整就變來變去造成混亂）
+function seedRand(str){
+  var h=0;
+  for(var i=0;i<str.length;i++){ h=((h<<5)-h+str.charCodeAt(i))|0; }
+  return Math.abs(h % 100) / 100; // 0~1 之間
+}
 
 function buildDemoRecords(){
   var recs = {};
   Object.keys(DEFAULT_DATA).forEach(function(bigC){
     Object.keys(DEFAULT_DATA[bigC]).forEach(function(team){
-      var pct = DEMO_PCTS[team];
-      if(pct===undefined) return;
       DEFAULT_DATA[bigC][team].forEach(function(name){
         var pk = bigC+"|"+team+"|"+name;
+        var pct = seedRand(pk); // 每人各自隨機完成度 0~100%
         var tasks = (bigC==="香綺大C") ? TASKS.concat([EXTRA_TASK]) : TASKS;
         recs[pk] = recs[pk] || {};
-        // 計算每個任務要完成幾天/次，依完成度比例
         var perTaskCount = {};
         tasks.forEach(function(t){
           perTaskCount[t.key] = Math.round(t.goal * pct);
@@ -202,11 +201,11 @@ DB.child("data").on("value",function(s){
     S.data=val;R();
   }
 });
-DB.child("records").once("value",function(rs){
-  var existing = rs.val();
-  if(!existing || Object.keys(existing).length===0){
-    // 第一次載入：灌入演示資料
+var DEMO_RECORDS_VERSION = "v2"; // 改這個版本號會強制重新灌入演示資料
+DB.child("records_demo_version").once("value",function(vs){
+  if(vs.val()!==DEMO_RECORDS_VERSION){
     DB.child("records").set(buildDemoRecords());
+    DB.child("records_demo_version").set(DEMO_RECORDS_VERSION);
   }
 });
 DB.child("records").on("value",function(s){S.records=s.val()||{};R();});
@@ -404,24 +403,10 @@ function htmlView(){
   var bcs=bigCs();
   if(!bcs.length)return '<div class="panel"><div class="ptitle">📊 查看進度</div><div style="color:var(--mut);text-align:center;padding:40px">尚未設定名單</div></div>';
 
-  var h='<div class="panel"><div class="ptitle">📊 三大Ｃ完成進度</div>';
-
-  // 三大C總覽（維持原本顯示）
-  bcs.forEach(function(b){
-    var pct=bigCPct(b);
-    var color=pct>=80?"#2ecc71":pct>=50?"#22d3ee":pct>=25?"#e67e22":"#e74c3c";
-    h+='<div class="cblock"><div class="chead">';
-    h+='<span class="cname">'+esc(b)+'</span><span class="cpct">'+Math.round(pct)+'%</span></div>';
-    h+='<div class="pbar-track"><div class="pbar-fill" style="width:'+pct+'%;background:'+color+'"></div>';
-    h+='<span class="pbar-pct">'+Math.round(pct)+'%</span></div></div>';
-  });
-
-  // 分隔線 + 各隊明細區塊
-  h+='<div style="border-top:1px solid var(--bdr);margin:20px 0 16px"></div>';
-  h+='<div class="slbl">🔍 查看某大Ｃ旗下隊伍進度</div>';
+  var h='<div class="panel"><div class="ptitle">📊 查看進度</div>';
 
   // 大C下拉選單 + 排序按鈕
-  h+='<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">';
+  h+='<div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center">';
   h+='<select class="sel sm" id="viewBigSel" style="flex:1;min-width:140px"><option value="">── 選擇大Ｃ ──</option>';
   bcs.forEach(function(b){h+='<option value="'+esc(b)+'"'+(b===S.viewBig?' selected':'')+'>'+esc(b)+'</option>';});
   h+='</select>';
@@ -430,12 +415,16 @@ function htmlView(){
      '</button>';
   h+='</div>';
 
-  if(S.viewBig){
+  if(!S.viewBig){
+    h+='<div style="color:var(--mut);text-align:center;padding:30px">請先選擇一個大Ｃ查看詳細進度</div>';
+  }else{
     var teams=teamsOf(S.viewBig);
-    var teamData=teams.map(function(t){return {team:t,pct:teamPct(S.viewBig,t)};});
+    var teamData=teams.map(function(t){
+      var members=membersOf(S.viewBig,t).map(function(m){return {name:m,pct:personPct(S.viewBig,t,m)};});
+      return {team:t,pct:teamPct(S.viewBig,t),members:members};
+    });
     if(S.viewSort==="desc")teamData.sort(function(a,b){return b.pct-a.pct;});
     else if(S.viewSort==="asc")teamData.sort(function(a,b){return a.pct-b.pct;});
-    // default：維持原始隊伍順序，不排序
 
     if(!teamData.length){
       h+='<div style="color:var(--mut);text-align:center;padding:20px">此大Ｃ尚無隊伍</div>';
@@ -443,10 +432,21 @@ function htmlView(){
       teamData.forEach(function(td){
         var pct=td.pct;
         var color=pct>=80?"#2ecc71":pct>=50?"#22d3ee":pct>=25?"#e67e22":"#e74c3c";
-        h+='<div class="cblock" style="padding:14px 18px"><div class="chead" style="margin-bottom:8px">';
-        h+='<span class="cname" style="font-size:14px">'+esc(td.team)+'</span><span class="cpct">'+Math.round(pct)+'%</span></div>';
-        h+='<div class="pbar-track" style="height:10px"><div class="pbar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>';
-        h+='</div>';
+        h+='<div class="cblock" style="padding:16px 18px">';
+        h+='<div class="chead" style="margin-bottom:10px">';
+        h+='<span class="cname" style="font-size:15px">'+esc(td.team)+'</span><span class="cpct">'+Math.round(pct)+'%</span></div>';
+        h+='<div class="pbar-track" style="height:10px;margin-bottom:14px"><div class="pbar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>';
+        // 隊員列表
+        h+='<div style="display:flex;flex-direction:column;gap:8px">';
+        td.members.forEach(function(m){
+          var mc=m.pct>=80?"#2ecc71":m.pct>=50?"#22d3ee":m.pct>=25?"#e67e22":"#e74c3c";
+          h+='<div style="display:flex;align-items:center;gap:10px">';
+          h+='<span style="font-size:13px;width:64px;flex-shrink:0;color:var(--txt)">'+esc(m.name)+'</span>';
+          h+='<div class="pbar-track" style="height:8px;flex:1"><div class="pbar-fill" style="width:'+m.pct+'%;background:'+mc+'"></div></div>';
+          h+='<span style="font-size:12px;width:40px;text-align:right;color:var(--mut)">'+Math.round(m.pct)+'%</span>';
+          h+='</div>';
+        });
+        h+='</div></div>';
       });
     }
   }
