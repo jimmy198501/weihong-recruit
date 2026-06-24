@@ -184,7 +184,8 @@ function actDay(){
 var S={tab:"submit",data:{},records:{},adminOk:false,
   cBig:"",cTeam:"",cName:"",
   photos:{},smsg:"",busy:false,
-  et:{cBig:"",cTeam:"",name:"",from:"",to:""},emsg:""};
+  et:{cBig:"",cTeam:"",name:"",from:"",to:""},emsg:"",
+  viewBig:"",viewSort:"default"};
 
 var DATA_VERSION="v1";
 DB.child("data_version").once("value",function(vs){
@@ -253,6 +254,13 @@ function bigCPct(bigC){
   if(!all.length)return 0;
   var sum=all.reduce(function(x,p){return x+personPct(bigC,p.team,p.name);},0);
   return sum/all.length;
+}
+// 某大C旗下某隊的完成率（隊內所有人平均）
+function teamPct(bigC,team){
+  var members=membersOf(bigC,team);
+  if(!members.length)return 0;
+  var sum=members.reduce(function(x,m){return x+personPct(bigC,team,m);},0);
+  return sum/members.length;
 }
 
 // 提交
@@ -395,7 +403,10 @@ function htmlSubmit(today){
 function htmlView(){
   var bcs=bigCs();
   if(!bcs.length)return '<div class="panel"><div class="ptitle">📊 查看進度</div><div style="color:var(--mut);text-align:center;padding:40px">尚未設定名單</div></div>';
+
   var h='<div class="panel"><div class="ptitle">📊 三大Ｃ完成進度</div>';
+
+  // 三大C總覽（維持原本顯示）
   bcs.forEach(function(b){
     var pct=bigCPct(b);
     var color=pct>=80?"#2ecc71":pct>=50?"#22d3ee":pct>=25?"#e67e22":"#e74c3c";
@@ -404,6 +415,42 @@ function htmlView(){
     h+='<div class="pbar-track"><div class="pbar-fill" style="width:'+pct+'%;background:'+color+'"></div>';
     h+='<span class="pbar-pct">'+Math.round(pct)+'%</span></div></div>';
   });
+
+  // 分隔線 + 各隊明細區塊
+  h+='<div style="border-top:1px solid var(--bdr);margin:20px 0 16px"></div>';
+  h+='<div class="slbl">🔍 查看某大Ｃ旗下隊伍進度</div>';
+
+  // 大C下拉選單 + 排序按鈕
+  h+='<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">';
+  h+='<select class="sel sm" id="viewBigSel" style="flex:1;min-width:140px"><option value="">── 選擇大Ｃ ──</option>';
+  bcs.forEach(function(b){h+='<option value="'+esc(b)+'"'+(b===S.viewBig?' selected':'')+'>'+esc(b)+'</option>';});
+  h+='</select>';
+  h+='<button class="mbtn" id="sortBtn" style="white-space:nowrap">'+
+     (S.viewSort==="desc" ? "🔽 完成度高→低" : S.viewSort==="asc" ? "🔼 完成度低→高" : "↕️ 依完成度排序")+
+     '</button>';
+  h+='</div>';
+
+  if(S.viewBig){
+    var teams=teamsOf(S.viewBig);
+    var teamData=teams.map(function(t){return {team:t,pct:teamPct(S.viewBig,t)};});
+    if(S.viewSort==="desc")teamData.sort(function(a,b){return b.pct-a.pct;});
+    else if(S.viewSort==="asc")teamData.sort(function(a,b){return a.pct-b.pct;});
+    // default：維持原始隊伍順序，不排序
+
+    if(!teamData.length){
+      h+='<div style="color:var(--mut);text-align:center;padding:20px">此大Ｃ尚無隊伍</div>';
+    }else{
+      teamData.forEach(function(td){
+        var pct=td.pct;
+        var color=pct>=80?"#2ecc71":pct>=50?"#22d3ee":pct>=25?"#e67e22":"#e74c3c";
+        h+='<div class="cblock" style="padding:14px 18px"><div class="chead" style="margin-bottom:8px">';
+        h+='<span class="cname" style="font-size:14px">'+esc(td.team)+'</span><span class="cpct">'+Math.round(pct)+'%</span></div>';
+        h+='<div class="pbar-track" style="height:10px"><div class="pbar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>';
+        h+='</div>';
+      });
+    }
+  }
+
   h+='</div>';
   return h;
 }
@@ -496,6 +543,14 @@ function bind(){
   ["submit","view","admin"].forEach(function(k){
     var el=document.getElementById("tab_"+k);
     if(el)el.addEventListener("click",function(){S.tab=k;R();});
+  });
+  // 查看進度頁：大C選單與排序按鈕
+  var vbs=document.getElementById("viewBigSel");
+  if(vbs)vbs.addEventListener("change",function(){S.viewBig=this.value;S.viewSort="default";R();});
+  var sortBtn=document.getElementById("sortBtn");
+  if(sortBtn)sortBtn.addEventListener("click",function(){
+    S.viewSort = S.viewSort==="default" ? "desc" : S.viewSort==="desc" ? "asc" : "default";
+    R();
   });
   var sb=document.getElementById("selBig");
   if(sb)sb.addEventListener("change",function(){S.cBig=this.value;S.cTeam="";S.cName="";S.photos={};S.smsg="";R();});
