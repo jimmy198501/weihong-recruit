@@ -56,6 +56,16 @@ body{background:var(--bg);color:var(--txt);font-family:var(--fb);min-height:100v
 .pbar-pct{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;color:#fff;font-weight:700}
 .slbl{font-size:14px;font-weight:700;color:var(--mut);margin-bottom:12px}
 .cblock{background:rgba(255,255,255,.02);border:1px solid var(--bdr);border-radius:14px;padding:20px;margin-bottom:20px}
+.mcard2{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:14px}
+.mcard2-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.mcard2-name{font-weight:700;font-size:14px}
+.mcard2-pct{font-family:var(--fh);font-size:14px;font-weight:700}
+.mcard2-task{margin-bottom:8px}
+.mcard2-task:last-child{margin-bottom:0}
+.mcard2-task-label{font-size:11px;color:var(--mut);margin-bottom:4px}
+.mcard2-dots{display:flex;flex-wrap:wrap;gap:3px}
+.mcard2-dot{width:9px;height:9px;border-radius:2px;background:rgba(255,255,255,.08)}
+.mcard2-dot.on{background:var(--grn)}
 .chead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .cname{font-family:var(--fh);font-size:16px;color:var(--acc2)}
 .cpct{font-size:14px;color:var(--acc);font-weight:700;background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3);padding:4px 12px;border-radius:20px}
@@ -399,6 +409,38 @@ function htmlSubmit(today){
   return h;
 }
 
+// 隊員個人卡片：整體完成度 + 每項任務各自28天的點點點
+function memberCard(bigC,team,name,pct){
+  var tasks=tasksFor(bigC);
+  var pk=personKey(bigC,team,name);
+  var rec=S.records[pk]||{};
+  var color=pct>=80?"#2ecc71":pct>=50?"#22d3ee":pct>=25?"#e67e22":"#e74c3c";
+
+  var h='<div class="mcard2">';
+  h+='<div class="mcard2-head">';
+  h+='<span class="mcard2-name">'+esc(name)+'</span>';
+  h+='<span class="mcard2-pct" style="color:'+color+'">'+Math.round(pct)+'%</span>';
+  h+='</div>';
+  h+='<div class="pbar-track" style="height:8px;margin-bottom:10px"><div class="pbar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>';
+
+  tasks.forEach(function(t){
+    var cnt=taskCount(bigC,team,name,t.key);
+    h+='<div class="mcard2-task">';
+    h+='<div class="mcard2-task-label">'+t.icon+' '+t.name+(t.noGoal?'':' '+cnt+'/'+t.goal+t.unit)+(t.noGoal?'　'+cnt+t.unit:'')+'</div>';
+    h+='<div class="mcard2-dots">';
+    for(var i=0;i<TOTAL_DAYS;i++){
+      var d=new Date(A_START); d.setDate(d.getDate()+i);
+      var dateStr=d.toISOString().split("T")[0];
+      var done=rec[dateStr]&&rec[dateStr][t.key];
+      h+='<div class="mcard2-dot'+(done?' on':'')+'" title="第'+(i+1)+'天"></div>';
+    }
+    h+='</div></div>';
+  });
+
+  h+='</div>';
+  return h;
+}
+
 function htmlView(){
   var bcs=bigCs();
   if(!bcs.length)return '<div class="panel"><div class="ptitle">📊 查看進度</div><div style="color:var(--mut);text-align:center;padding:40px">尚未設定名單</div></div>';
@@ -436,15 +478,10 @@ function htmlView(){
         h+='<div class="chead" style="margin-bottom:10px">';
         h+='<span class="cname" style="font-size:15px">'+esc(td.team)+'</span><span class="cpct">'+Math.round(pct)+'%</span></div>';
         h+='<div class="pbar-track" style="height:10px;margin-bottom:14px"><div class="pbar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>';
-        // 隊員列表
-        h+='<div style="display:flex;flex-direction:column;gap:8px">';
+        // 隊員列表（卡片式，每項任務各自顯示 28 天的點點點）
+        h+='<div style="display:flex;flex-direction:column;gap:12px">';
         td.members.forEach(function(m){
-          var mc=m.pct>=80?"#2ecc71":m.pct>=50?"#22d3ee":m.pct>=25?"#e67e22":"#e74c3c";
-          h+='<div style="display:flex;align-items:center;gap:10px">';
-          h+='<span style="font-size:13px;width:64px;flex-shrink:0;color:var(--txt)">'+esc(m.name)+'</span>';
-          h+='<div class="pbar-track" style="height:8px;flex:1"><div class="pbar-fill" style="width:'+m.pct+'%;background:'+mc+'"></div></div>';
-          h+='<span style="font-size:12px;width:40px;text-align:right;color:var(--mut)">'+Math.round(m.pct)+'%</span>';
-          h+='</div>';
+          h+=memberCard(S.viewBig,td.team,m.name,m.pct);
         });
         h+='</div></div>';
       });
