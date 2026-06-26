@@ -56,6 +56,10 @@ body{background:var(--bg);color:var(--txt);font-family:var(--fb);min-height:100v
 .pbar-pct{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;color:#fff;font-weight:700}
 .slbl{font-size:14px;font-weight:700;color:var(--mut);margin-bottom:12px}
 .cblock{background:rgba(255,255,255,.02);border:1px solid var(--bdr);border-radius:14px;padding:20px;margin-bottom:20px}
+.notice-box{margin-top:24px;background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.25);border-radius:12px;padding:16px 18px}
+.notice-title{font-size:13px;font-weight:700;color:var(--acc2);margin-bottom:10px}
+.notice-item{font-size:12px;color:var(--mut);line-height:1.7;margin-bottom:4px}
+.notice-item:last-child{margin-bottom:0}
 .mcard2{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:14px}
 .mcard2-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .mcard2-name{font-weight:700;font-size:14px}
@@ -405,6 +409,16 @@ function htmlSubmit(today){
     h+='<button class="sbtn" id="submitBtn"'+(S.busy?' disabled':'')+'>'+(S.busy?'送出中...':'⚔️ 送出今日任務')+'</button>';
     if(S.smsg)h+='<div class="msg '+(S.smsg.startsWith('🎉')?'ok':'err')+'">'+esc(S.smsg)+'</div>';
   }
+
+  // 注意事項
+  h+='<div class="notice-box">';
+  h+='<div class="notice-title">📌 注意事項</div>';
+  h+='<div class="notice-item">1. 一人一天只能上傳一次，建議把一天做完的事再上傳。</div>';
+  h+='<div class="notice-item">2. 上傳時間會以台灣時間為主，過了晚上12點，日期就會變成隔一天。</div>';
+  h+='<div class="notice-item">3. 上傳完成，畫面會顯示已上傳完成，也可以在「查看進度」裡看到變化。</div>';
+  h+='<div class="notice-item">4. 上傳遇到任何問題，請洽「自己大Ｃ招募組副組長」。</div>';
+  h+='</div>';
+
   h+='</div>';
   return h;
 }
@@ -445,7 +459,20 @@ function htmlView(){
   var bcs=bigCs();
   if(!bcs.length)return '<div class="panel"><div class="ptitle">📊 查看進度</div><div style="color:var(--mut);text-align:center;padding:40px">尚未設定名單</div></div>';
 
-  var h='<div class="panel"><div class="ptitle">📊 查看進度</div>';
+  var h='<div class="panel"><div class="ptitle">📊 三大Ｃ完成進度</div>';
+
+  // 三大C總覽
+  bcs.forEach(function(b){
+    var pct=bigCPct(b);
+    var color=pct>=80?"#2ecc71":pct>=50?"#22d3ee":pct>=25?"#e67e22":"#e74c3c";
+    h+='<div class="cblock"><div class="chead">';
+    h+='<span class="cname">'+esc(b)+'</span><span class="cpct">'+Math.round(pct)+'%</span></div>';
+    h+='<div class="pbar-track"><div class="pbar-fill" style="width:'+pct+'%;background:'+color+'"></div>';
+    h+='<span class="pbar-pct">'+Math.round(pct)+'%</span></div></div>';
+  });
+
+  h+='<div style="border-top:1px solid var(--bdr);margin:20px 0 16px"></div>';
+  h+='<div class="slbl">🔍 查看某大Ｃ旗下隊伍與隊員進度</div>';
 
   // 大C下拉選單 + 排序按鈕
   h+='<div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center">';
