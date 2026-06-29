@@ -580,6 +580,7 @@ function htmlAdmin(){
 
   // 選人員快速查看與調整（大C→隊伍→姓名）
   h+='<div class="move-sec"><div class="slbl">👤 選人員快速查看與調整</div>';
+  h+='<div style="font-size:11px;color:var(--mut);margin-bottom:10px">💡 選擇大Ｃ／隊伍後，下方「逐人審核」也會自動篩選只顯示該範圍的人員</div>';
   h+='<div class="move-grid">';
   h+='<div><div class="flabel">大Ｃ</div><select class="sel sm" id="adBig"><option value="">請選擇</option>';
   bcs.forEach(function(b){h+='<option value="'+esc(b)+'"'+(b===S.adminSel.cBig?' selected':'')+'>'+esc(b)+'</option>';});
@@ -619,10 +620,17 @@ function htmlAdmin(){
   if(S.emsg)h+='<div class="msg '+(S.emsg.startsWith('✅')?'ok':'err')+'" style="margin-top:8px">'+esc(S.emsg)+'</div>';
   h+='</div>';
 
-  // 逐人審核
-  h+='<div class="slbl">📷 逐人審核</div>';
+  // 逐人審核（依上方「選人員」區塊選的大C/隊伍篩選；若都沒選則顯示全部）
+  h+='<div class="slbl">📷 逐人審核'+
+     (S.adminSel.cBig ? '　── 篩選：'+esc(S.adminSel.cBig)+(S.adminSel.cTeam?' / '+esc(S.adminSel.cTeam):'') : '')+
+     '</div>';
+  var filteredPeople = allPeople.filter(function(p){
+    if(S.adminSel.cBig && p.big!==S.adminSel.cBig) return false;
+    if(S.adminSel.cTeam && p.team!==S.adminSel.cTeam) return false;
+    return true;
+  });
   var hasAny=false;
-  allPeople.forEach(function(p){
+  filteredPeople.forEach(function(p){
     var pk=personKey(p.big,p.team,p.name);
     var rec=S.records[pk]||{};
     var dates=Object.keys(rec).sort();
