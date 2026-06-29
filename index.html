@@ -70,6 +70,9 @@ body{background:var(--bg);color:var(--txt);font-family:var(--fb);min-height:100v
 .mcard2-dots{display:flex;flex-wrap:wrap;gap:3px}
 .mcard2-dot{width:9px;height:9px;border-radius:2px;background:rgba(255,255,255,.08)}
 .mcard2-dot.on{background:var(--grn)}
+.mcard2-admin-dates{margin-top:12px;padding-top:12px;border-top:1px solid var(--bdr)}
+.mcard2-admin-title{font-size:11px;color:var(--mut);margin-bottom:8px}
+.mcard2-admin-daterow{display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:5px 0;color:var(--txt)}
 .chead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .cname{font-family:var(--fh);font-size:16px;color:var(--acc2)}
 .cpct{font-size:14px;color:var(--acc);font-weight:700;background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3);padding:4px 12px;border-radius:20px}
@@ -198,7 +201,8 @@ var S={tab:"submit",data:{},records:{},adminOk:false,
   cBig:"",cTeam:"",cName:"",
   photos:{},smsg:"",busy:false,
   et:{cBig:"",cTeam:"",name:"",from:"",to:""},emsg:"",
-  viewBig:"",viewSort:"default"};
+  viewBig:"",viewSort:"default",
+  adminSel:{cBig:"",cTeam:"",name:""}};
 
 var DATA_VERSION="v1";
 DB.child("data_version").once("value",function(vs){
@@ -424,7 +428,8 @@ function htmlSubmit(today){
 }
 
 // 隊員個人卡片：整體完成度 + 每項任務各自28天的點點點
-function memberCard(bigC,team,name,pct){
+// adminMode=true 時，每個點點可以點擊查看/刪除當天紀錄（管理員專用）
+function memberCard(bigC,team,name,pct,adminMode){
   var tasks=tasksFor(bigC);
   var pk=personKey(bigC,team,name);
   var rec=S.records[pk]||{};
@@ -445,11 +450,33 @@ function memberCard(bigC,team,name,pct){
     for(var i=0;i<TOTAL_DAYS;i++){
       var d=new Date(A_START); d.setDate(d.getDate()+i);
       var dateStr=d.toISOString().split("T")[0];
-      var done=rec[dateStr]&&rec[dateStr][t.key];
-      h+='<div class="mcard2-dot'+(done?' on':'')+'" title="第'+(i+1)+'天"></div>';
+      var photo=rec[dateStr]&&rec[dateStr][t.key];
+      var done=!!photo;
+      if(adminMode && done){
+        h+='<a href="'+photo+'" target="_blank" class="mcard2-dot on" data-admindot="1" title="第'+(i+1)+'天　點擊查看照片"></a>';
+      }else{
+        h+='<div class="mcard2-dot'+(done?' on':'')+'" title="第'+(i+1)+'天"></div>';
+      }
     }
     h+='</div></div>';
   });
+
+  if(adminMode){
+    // 列出此人所有有提交紀錄的日期，供管理員逐筆刪除
+    var dates=Object.keys(rec).sort();
+    if(dates.length){
+      h+='<div class="mcard2-admin-dates"><div class="mcard2-admin-title">📅 提交紀錄（點擊刪除整天紀錄）</div>';
+      dates.forEach(function(d){
+        h+='<div class="mcard2-admin-daterow">';
+        h+='<span>'+d+(rec[d].adminMoved?' <span style="color:var(--acc);font-size:10px">已移動</span>':'')+'</span>';
+        h+='<button class="dbtn" data-deladmin-pk="'+esc(pk)+'" data-deladmin-d="'+d+'">🗑️ 刪除</button>';
+        h+='</div>';
+      });
+      h+='</div>';
+    }else{
+      h+='<div class="mcard2-admin-dates"><div style="color:var(--mut);font-size:12px">尚無提交紀錄</div></div>';
+    }
+  }
 
   h+='</div>';
   return h;
@@ -551,6 +578,28 @@ function htmlAdmin(){
     h+='<div class="pbar-track" style="height:8px"><div class="pbar-fill" style="width:'+pct+'%;background:#22d3ee"></div></div></div>';
   });
 
+  // 選人員快速查看與調整（大C→隊伍→姓名）
+  h+='<div class="move-sec"><div class="slbl">👤 選人員快速查看與調整</div>';
+  h+='<div class="move-grid">';
+  h+='<div><div class="flabel">大Ｃ</div><select class="sel sm" id="adBig"><option value="">請選擇</option>';
+  bcs.forEach(function(b){h+='<option value="'+esc(b)+'"'+(b===S.adminSel.cBig?' selected':'')+'>'+esc(b)+'</option>';});
+  h+='</select></div>';
+  h+='<div><div class="flabel">隊伍</div><select class="sel sm" id="adTeam"><option value="">請選擇</option>';
+  if(S.adminSel.cBig)teamsOf(S.adminSel.cBig).forEach(function(t){h+='<option value="'+esc(t)+'"'+(t===S.adminSel.cTeam?' selected':'')+'>'+esc(t)+'</option>';});
+  h+='</select></div>';
+  h+='<div><div class="flabel">姓名</div><select class="sel sm" id="adName"><option value="">請選擇</option>';
+  if(S.adminSel.cBig&&S.adminSel.cTeam)membersOf(S.adminSel.cBig,S.adminSel.cTeam).forEach(function(m){h+='<option value="'+esc(m)+'"'+(m===S.adminSel.name?' selected':'')+'>'+esc(m)+'</option>';});
+  h+='</select></div>';
+  h+='</div>';
+
+  if(S.adminSel.cBig&&S.adminSel.cTeam&&S.adminSel.name){
+    var selPct=personPct(S.adminSel.cBig,S.adminSel.cTeam,S.adminSel.name);
+    h+='<div style="margin-top:14px">';
+    h+=memberCard(S.adminSel.cBig,S.adminSel.cTeam,S.adminSel.name,selPct,true);
+    h+='</div>';
+  }
+  h+='</div>';
+
   // 移動日期
   var bigOpts='<option value="">請選擇</option>';
   bcs.forEach(function(b){bigOpts+='<option value="'+esc(b)+'"'+(b===S.et.cBig?' selected':'')+'>'+esc(b)+'</option>';});
@@ -615,6 +664,17 @@ function bind(){
   if(sortBtn)sortBtn.addEventListener("click",function(){
     S.viewSort = S.viewSort==="default" ? "desc" : S.viewSort==="desc" ? "asc" : "default";
     R();
+  });
+  // 管理員：選人員快速查看
+  var adBig=document.getElementById("adBig");
+  var adTeam=document.getElementById("adTeam");
+  var adName=document.getElementById("adName");
+  if(adBig)adBig.addEventListener("change",function(){S.adminSel.cBig=this.value;S.adminSel.cTeam="";S.adminSel.name="";R();});
+  if(adTeam)adTeam.addEventListener("change",function(){S.adminSel.cTeam=this.value;S.adminSel.name="";R();});
+  if(adName)adName.addEventListener("change",function(){S.adminSel.name=this.value;R();});
+  // 管理員：在人員卡片上刪除單筆紀錄
+  document.querySelectorAll("[data-deladmin-pk]").forEach(function(btn){
+    btn.addEventListener("click",function(){delRec(this.dataset.deladminPk,this.dataset.deladminD);});
   });
   var sb=document.getElementById("selBig");
   if(sb)sb.addEventListener("change",function(){S.cBig=this.value;S.cTeam="";S.cName="";S.photos={};S.smsg="";R();});
