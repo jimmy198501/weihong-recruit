@@ -126,7 +126,7 @@ var TASKS = [
 ];
 // 香綺大C 專屬額外任務
 var EXTRA_TASK_FOR = "香綺大C";
-var EXTRA_TASK = {key:"close", icon:"🤝", name:"跟進或締結", goal:4, unit:"次", totalDays:28, noGoal:true};
+var EXTRA_TASK = {key:"close", icon:"🤝", name:"週週100BV/評估/締結", goal:4, unit:"次", totalDays:28, noGoal:true};
 
 // 隨機生成的範例資料（先佔位，之後可由管理員調整或你提供正式名單後我直接改）
 var DEFAULT_DATA = {
@@ -619,6 +619,24 @@ function htmlAdmin(){
   h+='</div>';
   if(S.emsg)h+='<div class="msg '+(S.emsg.startsWith('✅')?'ok':'err')+'" style="margin-top:8px">'+esc(S.emsg)+'</div>';
   h+='</div>';
+
+  // 香綺大C專屬：篩選到香綺大C時，顯示各隊「週週100BV/評估/締結」總次數統計
+  if(S.adminSel.cBig===EXTRA_TASK_FOR){
+    var extraTeams = teamsOf(S.adminSel.cBig).filter(function(t){
+      return !S.adminSel.cTeam || t===S.adminSel.cTeam;
+    });
+    h+='<div class="cblock" style="margin-bottom:16px">';
+    h+='<div class="slbl" style="margin-bottom:10px">'+EXTRA_TASK.icon+' '+EXTRA_TASK.name+'　各隊總次數</div>';
+    extraTeams.forEach(function(t){
+      var members=membersOf(S.adminSel.cBig,t);
+      var total=members.reduce(function(sum,m){return sum+taskCount(S.adminSel.cBig,t,m,EXTRA_TASK.key);},0);
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-top:1px solid var(--bdr)">';
+      h+='<span style="font-size:13px">'+esc(t)+'</span>';
+      h+='<span style="font-family:var(--fh);font-size:14px;color:var(--acc2);font-weight:700">'+total+' 次</span>';
+      h+='</div>';
+    });
+    h+='</div>';
+  }
 
   // 逐人審核（依上方「選人員」區塊選的大C/隊伍篩選；若都沒選則顯示全部）
   h+='<div class="slbl">📷 逐人審核'+
