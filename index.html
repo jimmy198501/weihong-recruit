@@ -197,6 +197,19 @@ DB.child("data").on("value", function(s){
 });
 DB.child("records").on("value",function(s){S.records=s.val()||{};R();});
 
+// ── 台灣時間工具函式 ──
+function pad(n){return String(n).padStart(2,"0");}
+function twToday(){
+  var tw=new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Taipei"}));
+  return tw.getFullYear()+"-"+pad(tw.getMonth()+1)+"-"+pad(tw.getDate());
+}
+function actDay(){
+  var tw=new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Taipei"}));
+  var d=Math.floor((tw-new Date(A_START+"T00:00:00"))/86400000);
+  return(d>=0&&d<TOTAL_DAYS)?d+1:null;
+}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
 // 取得所有大C
 function bigCs(){return Object.keys(S.data);}
 // 取得某大C的隊伍
