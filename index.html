@@ -160,11 +160,16 @@ var EXTRA_TASK_FOR = "香綺大C";
 var EXTRA_TASK = {key:"close", icon:"🤝", name:"週週100BV/評估/締結", goal:4, unit:"次", totalDays:28, noGoal:true};
 
 // 隨機生成的範例資料（先佔位，之後可由管理員調整或你提供正式名單後我直接改）
-// 三大C基本結構（隊伍與隊員等正式名單確認後再補入）
 var DEFAULT_DATA = {
-  "香綺大C": {},
-  "子林大C": {},
-  "婷芝大C": {}
+  "香綺大C": {
+    "香綺A隊": ["香綺","小凱西","俊達"]
+  },
+  "婷芝大C": {
+    "婷芝A隊": ["婷芝","文怡","郁帆"]
+  },
+  "子林大C": {
+    "子林A隊": ["子林","銘銓","P爺"]
+  }
 };
 
 // ── 全域狀態 ──
@@ -178,7 +183,7 @@ var S={
 };
 
 // 強制修正：確保三大C是正確的物件格式（不是 0）
-var DATA_FIX_VERSION = "v4-fix";
+var DATA_FIX_VERSION = "v5-data";
 DB.child("data_fix_version").once("value", function(vs){
   if(vs.val() !== DATA_FIX_VERSION){
     DB.child("data").set(DEFAULT_DATA);
