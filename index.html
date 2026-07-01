@@ -112,9 +112,40 @@ firebase.initializeApp({
 });
 // 韋宏Ｂ招募活動：用同一個 Firebase 專案，資料路徑前綴 weihong2/ 避免跟其他活動衝突
 var DB = firebase.database().ref("weihong2");
+
+// ── Google Drive 上傳（透過 Google Apps Script 中繼）──
+var GAS_URL = "https://script.google.com/macros/s/AKfycbxW1sBrsPpawSqxj2vbZqtHDS1L7KKEjvRYQ-04-Bb2dix7nOYaJcYRVE0KB2sNZzG6Xw/exec";
+
+async function uploadToGDrive(file, bigC, team, name, taskKey, date){
+  // 把 File 物件轉成 base64
+  var base64 = await new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onload  = function(e){ resolve(e.target.result.split(",")[1]); };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  // 組出有意義的檔名：大C_隊伍_姓名_日期_任務.jpg
+  var ext = file.type.includes("png") ? "png" : "jpg";
+  var filename = [bigC, team, name, date, taskKey].join("_").replace(/[|/\s]/g,"_") + "." + ext;
+
+  var res = await fetch(GAS_URL, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      data:     base64,
+      filename: filename,
+      mimeType: file.type || "image/jpeg"
+    })
+  });
+
+  var json = await res.json();
+  if(!json.success) throw new Error(json.error || "Google Drive 上傳失敗");
+  return json.url; // 回傳 thumbnail 網址
+}
 var ADMIN_PW = "jimmy0117";
-var A_START = "2026-07-03";
-var A_END   = "2026-07-30";
+var A_START = "2026-07-06";
+var A_END   = "2026-08-02";
 var TOTAL_DAYS = 28;
 
 // 任務定義：天數型任務（要做到N天/N次）
@@ -129,101 +160,29 @@ var EXTRA_TASK_FOR = "香綺大C";
 var EXTRA_TASK = {key:"close", icon:"🤝", name:"週週100BV/評估/締結", goal:4, unit:"次", totalDays:28, noGoal:true};
 
 // 隨機生成的範例資料（先佔位，之後可由管理員調整或你提供正式名單後我直接改）
+// ★★★ 正式名單：等確認後填入 ★★★
 var DEFAULT_DATA = {
-  "香綺大C": {
-    "演示隊A": ["示範一","示範二","示範三"],
-    "演示隊B": ["示範四","示範五","示範六"]
-  },
-  "子林大C": {
-    "演示隊C": ["示範七","示範八","示範九"],
-    "演示隊D": ["示範十","示範十一","示範十二"]
-  },
-  "婷芝大C": {
-    "演示隊E": ["示範十三","示範十四","示範十五"],
-    "演示隊F": ["示範十六","示範十七","示範十八"]
-  }
+  "香綺大C": {},
+  "子林大C": {},
+  "婷芝大C": {}
 };
 
-// ══════════════════════════════════════
-// 演示用：每個隊員隨機灌入不同完成度的打卡紀錄（方便測試排序與列表效果）
-// ══════════════════════════════════════
-var TINY_PHOTO = "data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="#222"/><circle cx="20" cy="20" r="10" fill="#888"/></svg>');
-
-// 簡單的偽隨機（用字串 hash 當種子，確保同一人每次重整看到的數字一致，避免demo資料每次重整就變來變去造成混亂）
-function seedRand(str){
-  var h=0;
-  for(var i=0;i<str.length;i++){ h=((h<<5)-h+str.charCodeAt(i))|0; }
-  return Math.abs(h % 100) / 100; // 0~1 之間
-}
-
-function buildDemoRecords(){
-  var recs = {};
-  Object.keys(DEFAULT_DATA).forEach(function(bigC){
-    Object.keys(DEFAULT_DATA[bigC]).forEach(function(team){
-      DEFAULT_DATA[bigC][team].forEach(function(name){
-        var pk = bigC+"|"+team+"|"+name;
-        var pct = seedRand(pk); // 每人各自隨機完成度 0~100%
-        var tasks = (bigC==="香綺大C") ? TASKS.concat([EXTRA_TASK]) : TASKS;
-        recs[pk] = recs[pk] || {};
-        var perTaskCount = {};
-        tasks.forEach(function(t){
-          perTaskCount[t.key] = Math.round(t.goal * pct);
-        });
-        var maxCount = Math.max.apply(null, Object.values(perTaskCount));
-        for(var i=0;i<maxCount;i++){
-          var d = new Date("2026-07-03");
-          d.setDate(d.getDate()+i);
-          var dateStr = d.toISOString().split("T")[0];
-          var dayData = {ts:new Date().toISOString()};
-          tasks.forEach(function(t){
-            if(i < perTaskCount[t.key]) dayData[t.key] = TINY_PHOTO;
-          });
-          recs[pk][dateStr] = dayData;
-        }
-      });
-    });
-  });
-  return recs;
-}
-
-function twToday(){
-  var tw=new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Taipei"}));
-  return tw.getFullYear()+"-"+pad(tw.getMonth()+1)+"-"+pad(tw.getDate());
-}
-function pad(n){return String(n).padStart(2,"0");}
-function actDay(){
-  var tw=new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Taipei"}));
-  var d=Math.floor((tw-new Date(A_START+"T00:00:00"))/86400000);
-  return(d>=0&&d<TOTAL_DAYS)?d+1:null;
-}
-
-var S={tab:"submit",data:{},records:{},adminOk:false,
-  cBig:"",cTeam:"",cName:"",
-  photos:{},smsg:"",busy:false,
-  et:{cBig:"",cTeam:"",name:"",from:"",to:""},emsg:"",
-  viewBig:"",viewSort:"default",
-  adminSel:{cBig:"",cTeam:"",name:""}};
-
-var DATA_VERSION="v1";
-DB.child("data_version").once("value",function(vs){
-  if(vs.val()!==DATA_VERSION){
+// 版本控制：升版會清除 Firebase 舊的資料與隊伍，重新寫入新名單
+var APP_VERSION = "v3-official"; // 改這個值 → 清掉 Firebase 舊資料
+DB.child("app_version").once("value", function(vs){
+  if(vs.val() !== APP_VERSION){
     DB.child("data").set(DEFAULT_DATA);
-    DB.child("data_version").set(DATA_VERSION);
+    DB.child("records").remove();
+    DB.child("app_version").set(APP_VERSION);
   }
 });
-DB.child("data").on("value",function(s){
-  var val=s.val();
-  if(!val||Object.keys(val).length===0){
+
+DB.child("data").on("value", function(s){
+  var val = s.val();
+  if(!val || Object.keys(val).length === 0){
     DB.child("data").set(DEFAULT_DATA);
-  }else{
-    S.data=val;R();
-  }
-});
-var DEMO_RECORDS_VERSION = "v2"; // 改這個版本號會強制重新灌入演示資料
-DB.child("records_demo_version").once("value",function(vs){
-  if(vs.val()!==DEMO_RECORDS_VERSION){
-    DB.child("records").set(buildDemoRecords());
-    DB.child("records_demo_version").set(DEMO_RECORDS_VERSION);
+  } else {
+    S.data = val; R();
   }
 });
 DB.child("records").on("value",function(s){S.records=s.val()||{};R();});
@@ -289,18 +248,23 @@ async function doSubmit(){
   var pk=personKey(S.cBig,S.cTeam,S.cName);
   if(S.records[pk]&&S.records[pk][today])return sm("⚠️ 今天已提交過囉！");
   var tasks=tasksFor(S.cBig);
-  var anyPhoto=tasks.some(function(t){return S.photos[t.key];});
-  if(!anyPhoto)return sm("⚠️ 請至少上傳一項今天完成任務的照片");
-  S.busy=true;R();
+  var photosToUpload=tasks.filter(function(t){return S.photos[t.key] instanceof File;});
+  if(!photosToUpload.length)return sm("⚠️ 請至少上傳一項今天完成任務的照片");
+  S.busy=true;
+  sm("上傳中，請稍候⋯（共"+photosToUpload.length+"張照片）");
   try{
     var dayData={ts:new Date().toISOString()};
-    tasks.forEach(function(t){
-      if(S.photos[t.key]) dayData[t.key]=S.photos[t.key]; // 本地版：直接存 base64 字串；正式版會改存雲端網址
-    });
+    // 逐一上傳到 Google Drive，取得網址
+    for(var i=0;i<photosToUpload.length;i++){
+      var t=photosToUpload[i];
+      var url=await uploadToGDrive(S.photos[t.key],S.cBig,S.cTeam,S.cName,t.key,today);
+      dayData[t.key]=url;
+      sm("上傳中⋯（"+( i+1)+"/"+photosToUpload.length+"）");
+    }
     await DB.child("records/"+pk+"/"+today).set(dayData);
     S.photos={};
     sm("🎉 今日任務已記錄！");
-  }catch(e){sm("❌ 失敗："+e.message);}
+  }catch(e){sm("❌ 上傳失敗："+e.message);}
   S.busy=false;R();
 }
 function sm(m){S.smsg=m;R();}
@@ -342,8 +306,8 @@ function html(){
   h+='<header class="hero">';
   h+='<div class="hero-badge">⚔️ 招募挑戰</div>';
   h+='<h1 class="hero-title">韋宏Ｂ招募活動</h1>';
-  h+='<p class="hero-desc">7/3 – 7/30｜入群・BV試用・強連結・跑劇本</p>';
-  h+='<div class="hero-day">'+(day?'🗡️ 活動第 '+day+' 天 / '+TOTAL_DAYS+' 天':'活動期間：7/3 – 7/30')+'</div>';
+  h+='<p class="hero-desc">7/6 – 8/2｜入群・BV試用・強連結・跑劇本</p>';
+  h+='<div class="hero-day">'+(day?'🗡️ 活動第 '+day+' 天 / '+TOTAL_DAYS+' 天':'活動期間：7/6 – 8/2')+'</div>';
   h+='</header>';
   h+='<nav class="tabs">';
   [{k:"submit",l:"⚔️ 提交任務"},{k:"view",l:"📊 查看進度"},{k:"admin",l:"🔑 管理員"}].forEach(function(t){
