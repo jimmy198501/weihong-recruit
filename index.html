@@ -167,6 +167,16 @@ var DEFAULT_DATA = {
   "婷芝大C": {}
 };
 
+// ── 全域狀態 ──
+var S={
+  tab:"submit", data:{}, records:{}, adminOk:false, adminPw:"",
+  cBig:"", cTeam:"", cName:"",
+  photos:{}, smsg:"", busy:false,
+  et:{cBig:"",cTeam:"",name:"",from:"",to:""}, emsg:"",
+  viewBig:"", viewSort:"default",
+  adminSel:{cBig:"",cTeam:"",name:""}
+};
+
 // 版本控制：升版會清除 Firebase 舊的資料與隊伍，重新寫入新名單
 var APP_VERSION = "v3-official"; // 改這個值 → 清掉 Firebase 舊資料
 DB.child("app_version").once("value", function(vs){
