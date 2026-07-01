@@ -177,18 +177,25 @@ var S={
   adminSel:{cBig:"",cTeam:"",name:""}
 };
 
-// 只清打卡紀錄（不動大C/隊伍名單）
-var RECORDS_VERSION = "v1-clean"; // 改這個值 → 只清打卡紀錄
-DB.child("records_version").once("value", function(vs){
-  if(vs.val() !== RECORDS_VERSION){
-    DB.child("records").remove();
-    DB.child("records_version").set(RECORDS_VERSION);
+// 強制修正：確保三大C是正確的物件格式（不是 0）
+var DATA_FIX_VERSION = "v4-fix";
+DB.child("data_fix_version").once("value", function(vs){
+  if(vs.val() !== DATA_FIX_VERSION){
+    DB.child("data").set(DEFAULT_DATA);
+    DB.child("data_fix_version").set(DATA_FIX_VERSION);
   }
 });
 
 DB.child("data").on("value", function(s){
   var val = s.val();
-  if(!val || Object.keys(val).length === 0){
+  // 如果是空的、或大C的值不是物件（例如是 0），強制重寫
+  var needFix = !val;
+  if(val){
+    Object.keys(val).forEach(function(k){
+      if(typeof val[k] !== "object" || val[k] === null) needFix = true;
+    });
+  }
+  if(needFix){
     DB.child("data").set(DEFAULT_DATA);
   } else {
     S.data = val; R();
