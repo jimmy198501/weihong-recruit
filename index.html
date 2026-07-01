@@ -117,31 +117,39 @@ var DB = firebase.database().ref("weihong2");
 var GAS_URL = "https://script.google.com/macros/s/AKfycbxW1sBrsPpawSqxj2vbZqtHDS1L7KKEjvRYQ-04-Bb2dix7nOYaJcYRVE0KB2sNZzG6Xw/exec";
 
 async function uploadToGDrive(file, bigC, team, name, taskKey, date){
-  // 把 File 物件轉成 base64
-  var base64 = await new Promise(function(resolve, reject){
-    var reader = new FileReader();
-    reader.onload  = function(e){ resolve(e.target.result.split(",")[1]); };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+  var base64, mimeType, ext;
 
-  // 組出有意義的檔名：大C_隊伍_姓名_日期_任務.jpg
-  var ext = file.type.includes("png") ? "png" : "jpg";
-  var filename = [bigC, team, name, date, taskKey].join("_").replace(/[|/\s]/g,"_") + "." + ext;
+  if(file instanceof File){
+    // File 物件：用 FileReader 轉 base64
+    base64 = await new Promise(function(resolve, reject){
+      var reader = new FileReader();
+      reader.onload  = function(e){ resolve(e.target.result.split(",")[1]); };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    mimeType = file.type || "image/jpeg";
+    ext = file.type && file.type.includes("png") ? "png" : "jpg";
+  } else if(typeof file === "string" && file.startsWith("data:")){
+    // base64 字串：直接拆出資料部分
+    var parts = file.split(",");
+    base64   = parts[1];
+    mimeType = parts[0].replace("data:","").replace(";base64","") || "image/jpeg";
+    ext = mimeType.includes("png") ? "png" : "jpg";
+  } else {
+    throw new Error("不支援的照片格式");
+  }
+
+  var filename = [bigC, team, name, date, taskKey].join("_").replace(/[|\/\s]/g,"_") + "." + ext;
 
   var res = await fetch(GAS_URL, {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      data:     base64,
-      filename: filename,
-      mimeType: file.type || "image/jpeg"
-    })
+    body: JSON.stringify({ data: base64, filename: filename, mimeType: mimeType })
   });
 
   var json = await res.json();
   if(!json.success) throw new Error(json.error || "Google Drive 上傳失敗");
-  return json.url; // 回傳 thumbnail 網址
+  return json.url;
 }
 var ADMIN_PW = "jimmy0117";
 var A_START = "2026-07-06";
@@ -282,7 +290,7 @@ async function doSubmit(){
   var pk=personKey(S.cBig,S.cTeam,S.cName);
   if(S.records[pk]&&S.records[pk][today])return sm("⚠️ 今天已提交過囉！");
   var tasks=tasksFor(S.cBig);
-  var photosToUpload=tasks.filter(function(t){return S.photos[t.key] instanceof File;});
+  var photosToUpload=tasks.filter(function(t){return S.photos[t.key];});
   if(!photosToUpload.length)return sm("⚠️ 請至少上傳一項今天完成任務的照片");
   S.busy=true;
   sm("上傳中，請稍候⋯（共"+photosToUpload.length+"張照片）");
