@@ -160,7 +160,7 @@ var EXTRA_TASK_FOR = "香綺大C";
 var EXTRA_TASK = {key:"close", icon:"🤝", name:"週週100BV/評估/締結", goal:4, unit:"次", totalDays:28, noGoal:true};
 
 // 隨機生成的範例資料（先佔位，之後可由管理員調整或你提供正式名單後我直接改）
-// ★★★ 正式名單：等確認後填入 ★★★
+// 三大C基本結構（隊伍與隊員等正式名單確認後再補入）
 var DEFAULT_DATA = {
   "香綺大C": {},
   "子林大C": {},
@@ -177,13 +177,12 @@ var S={
   adminSel:{cBig:"",cTeam:"",name:""}
 };
 
-// 版本控制：升版會清除 Firebase 舊的資料與隊伍，重新寫入新名單
-var APP_VERSION = "v3-official"; // 改這個值 → 清掉 Firebase 舊資料
-DB.child("app_version").once("value", function(vs){
-  if(vs.val() !== APP_VERSION){
-    DB.child("data").set(DEFAULT_DATA);
+// 只清打卡紀錄（不動大C/隊伍名單）
+var RECORDS_VERSION = "v1-clean"; // 改這個值 → 只清打卡紀錄
+DB.child("records_version").once("value", function(vs){
+  if(vs.val() !== RECORDS_VERSION){
     DB.child("records").remove();
-    DB.child("app_version").set(APP_VERSION);
+    DB.child("records_version").set(RECORDS_VERSION);
   }
 });
 
