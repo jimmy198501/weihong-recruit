@@ -208,7 +208,8 @@ var DEFAULT_DATA = {
     "江雅雯姿吟小葉隊": ["江雅雯","姿吟","小葉"],
     "柏仁凱貞馨儀隊": ["柏仁","凱貞","馨儀"],
     "奕閔承翰紹暉隊": ["奕閔","承翰","紹暉"],
-    "Kim民宗咖琪隊": ["Kim","民宗","咖琪"]
+    "Kim民宗咖琪隊": ["Kim","民宗","咖琪"],
+    "妙齡瑞琪瓔玉隊": ["妙齡","瑞琪","瓔玉"]
   }
 };
 
@@ -223,7 +224,7 @@ var S={
 };
 
 // 強制修正：確保三大C是正確的物件格式（不是 0）
-var DATA_FIX_VERSION = "v6-official";
+var DATA_FIX_VERSION = "v7-sublin";
 DB.child("data_fix_version").once("value", function(vs){
   if(vs.val() !== DATA_FIX_VERSION){
     DB.child("data").set(DEFAULT_DATA);
