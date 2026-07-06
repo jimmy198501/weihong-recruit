@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>韋宏Ｂ招募活動</title>
+<title>創業養成小組</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
@@ -110,7 +110,7 @@ firebase.initializeApp({
   messagingSenderId:"477447792834",
   appId:"1:477447792834:web:c657ca4d3e612d1ccf335b"
 });
-// 韋宏Ｂ招募活動：用同一個 Firebase 專案，資料路徑前綴 weihong2/ 避免跟其他活動衝突
+// 創業養成小組：用同一個 Firebase 專案，資料路徑前綴 weihong2/ 避免跟其他活動衝突
 var DB = firebase.database().ref("weihong2");
 
 // ── Google Drive 上傳（透過 Google Apps Script 中繼）──
@@ -159,7 +159,7 @@ var TOTAL_DAYS = 28;
 
 // 任務定義：天數型任務（要做到N天/N次）
 var TASKS = [
-  {key:"join",  icon:"👥", name:"入群1位",       goal:21, unit:"天", totalDays:28},
+  {key:"join",  icon:"👥", name:"入群1位或陌開10位截圖", goal:21, unit:"天", totalDays:28},
   {key:"bv",    icon:"🧪", name:"BV試用分享",     goal:21, unit:"天", totalDays:28},
   {key:"link",  icon:"🔗", name:"強連結",         goal:4,  unit:"次", totalDays:28},
   {key:"script",icon:"🎬", name:"跑劇本",         goal:4,  unit:"次", totalDays:28},
@@ -171,13 +171,44 @@ var EXTRA_TASK = {key:"close", icon:"🤝", name:"週週100BV/評估/締結", go
 // 隨機生成的範例資料（先佔位，之後可由管理員調整或你提供正式名單後我直接改）
 var DEFAULT_DATA = {
   "香綺大C": {
-    "香綺A隊": ["香綺","小凱西","俊達"]
+    "金華A隊": ["金華","芷吟","智齡"],
+    "金華B隊": ["孟臻","翠韻","1000"],
+    "金華C隊": ["小原","冠余","李心怡"],
+    "金華D隊": ["郁芬","佳琪","馬姊"],
+    "佩潔A隊": ["佩潔","小凱西","婉芸"],
+    "佩潔B隊": ["偉庭","桓真","夙敏"],
+    "佩潔C隊": ["俊達","宜樺","秋丰"],
+    "佩潔D隊": ["育婷","士棻","雯雯"],
+    "凱西A隊": ["香綺","欣瑜","蔡心怡"],
+    "凱西B隊": ["Cherry","明樺","尉雯"],
+    "凱西C隊": ["雅瑜","宥伶","依庭"],
+    "凱西D隊": ["小瑜","筱晏","林香君"],
+    "維婉A隊": ["巧如","孟妤","書榮"],
+    "維婉B隊": ["蕙嬑","伯鍾","瓊慧"],
+    "維婉C隊": ["虹琳","儀均","淑芬"],
+    "維婉D隊": ["維婉","麗玲","薏蕙"]
   },
   "婷芝大C": {
-    "婷芝A隊": ["婷芝","文怡","郁帆"]
+    "文營富季淑媛隊": ["文營","富季","淑媛"],
+    "永峰巧倫宜君隊": ["永峰","巧倫","宜君"],
+    "佩華阿耀媛亭隊": ["佩華","阿耀","媛亭"],
+    "炘蓉文怡維瑜隊": ["炘蓉","文怡","維瑜"],
+    "品悅頭頭雅玲隊": ["品悅","頭頭","雅玲"],
+    "瑋仁予郁韻瑾隊": ["瑋仁","予郁","韻瑾"],
+    "婷芝智群麗珍隊": ["婷芝","智群","麗珍"],
+    "奕廷欣樺育璿隊": ["奕廷","欣樺","育璿"],
+    "郁佳婷律純如隊": ["郁佳","婷律","純如"],
+    "廸媽雅方祖蔭隊": ["廸媽","雅方","祖蔭"],
+    "幸樺靜芝金燕隊": ["幸樺","靜芝","金燕"]
   },
   "子林大C": {
-    "子林A隊": ["子林","銘銓","P爺"]
+    "子林宜睦張雅雯隊": ["子林","宜睦","雅雯"],
+    "晶晶慧珊苡家隊": ["晶晶","慧珊","苡家"],
+    "銘銓宜蓉念念隊": ["銘銓","宜蓉","念念"],
+    "江雅雯姿吟小葉隊": ["江雅雯","姿吟","小葉"],
+    "柏仁凱貞馨儀隊": ["柏仁","凱貞","馨儀"],
+    "奕閔承翰紹暉隊": ["奕閔","承翰","紹暉"],
+    "Kim民宗咖琪隊": ["Kim","民宗","咖琪"]
   }
 };
 
@@ -192,7 +223,7 @@ var S={
 };
 
 // 強制修正：確保三大C是正確的物件格式（不是 0）
-var DATA_FIX_VERSION = "v5-data";
+var DATA_FIX_VERSION = "v6-official";
 DB.child("data_fix_version").once("value", function(vs){
   if(vs.val() !== DATA_FIX_VERSION){
     DB.child("data").set(DEFAULT_DATA);
@@ -348,7 +379,7 @@ function html(){
   var h='<div class="bg-grid"></div>';
   h+='<header class="hero">';
   h+='<div class="hero-badge">⚔️ 招募挑戰</div>';
-  h+='<h1 class="hero-title">韋宏Ｂ招募活動</h1>';
+  h+='<h1 class="hero-title">創業養成小組</h1>';
   h+='<p class="hero-desc">7/6 – 8/2｜入群・BV試用・強連結・跑劇本</p>';
   h+='<div class="hero-day">'+(day?'🗡️ 活動第 '+day+' 天 / '+TOTAL_DAYS+' 天':'活動期間：7/6 – 8/2')+'</div>';
   h+='</header>';
@@ -360,7 +391,7 @@ function html(){
   if(S.tab==="submit")h+=htmlSubmit(today);
   else if(S.tab==="view")h+=htmlView();
   else h+=htmlAdmin();
-  h+='</main><footer>韋宏Ｂ招募活動 ⚔️</footer>';
+  h+='</main><footer>創業養成小組 ⚔️</footer>';
   return h;
 }
 
