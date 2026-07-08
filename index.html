@@ -220,7 +220,8 @@ var S={
   photos:{}, smsg:"", busy:false,
   et:{cBig:"",cTeam:"",name:"",from:"",to:""}, emsg:"",
   viewBig:"", viewSort:"default",
-  adminSel:{cBig:"",cTeam:"",name:""}
+  adminSel:{cBig:"",cTeam:"",name:""},
+  adminSort:"default"
 };
 
 // 強制修正：確保三大C是正確的物件格式（不是 0）
@@ -680,14 +681,23 @@ function htmlAdmin(){
   }
 
   // 逐人審核（依上方「選人員」區塊選的大C/隊伍篩選；若都沒選則顯示全部）
-  h+='<div class="slbl">📷 逐人審核'+
-     (S.adminSel.cBig ? '　── 篩選：'+esc(S.adminSel.cBig)+(S.adminSel.cTeam?' / '+esc(S.adminSel.cTeam):'') : '')+
-     '</div>';
-  var filteredPeople = allPeople.filter(function(p){
-    if(S.adminSel.cBig && p.big!==S.adminSel.cBig) return false;
-    if(S.adminSel.cTeam && p.team!==S.adminSel.cTeam) return false;
+  var sortLbl=S.adminSort==="desc"?"🔽 天數高→低":S.adminSort==="asc"?"🔼 天數低→高":"↕️ 依完成天數排序";
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">';
+  h+='<div class="slbl" style="margin-bottom:0">📷 逐人審核'+(S.adminSel.cBig?'　── '+esc(S.adminSel.cBig)+(S.adminSel.cTeam?' / '+esc(S.adminSel.cTeam):'')+'':"")+'</div>';
+  h+='<button class="mbtn" id="adminSortBtn" style="font-size:12px;padding:6px 12px;white-space:nowrap">'+sortLbl+'</button>';
+  h+='</div>';
+  var filteredPeople=allPeople.filter(function(p){
+    if(S.adminSel.cBig&&p.big!==S.adminSel.cBig)return false;
+    if(S.adminSel.cTeam&&p.team!==S.adminSel.cTeam)return false;
     return true;
+  }).map(function(p){
+    var pk=personKey(p.big,p.team,p.name);
+    var rec=S.records[pk]||{};
+    var days=Object.keys(rec).filter(function(d){return d>=A_START&&d<=A_END;}).length;
+    return {big:p.big,team:p.team,name:p.name,days:days};
   });
+  if(S.adminSort==="desc")filteredPeople.sort(function(a,b){return b.days-a.days;});
+  else if(S.adminSort==="asc")filteredPeople.sort(function(a,b){return a.days-b.days;});
   var hasAny=false;
   filteredPeople.forEach(function(p){
     var pk=personKey(p.big,p.team,p.name);
@@ -730,6 +740,11 @@ function bind(){
   var sortBtn=document.getElementById("sortBtn");
   if(sortBtn)sortBtn.addEventListener("click",function(){
     S.viewSort = S.viewSort==="default" ? "desc" : S.viewSort==="desc" ? "asc" : "default";
+    R();
+  });
+  var adminSortBtn=document.getElementById("adminSortBtn");
+  if(adminSortBtn)adminSortBtn.addEventListener("click",function(){
+    S.adminSort = S.adminSort==="default" ? "desc" : S.adminSort==="desc" ? "asc" : "default";
     R();
   });
   // 管理員：選人員快速查看
