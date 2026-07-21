@@ -81,6 +81,9 @@ body{background:var(--bg);color:var(--txt);font-family:var(--fb);min-height:100v
 .astat{background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:16px;text-align:center}
 .astat-n{font-family:var(--fh);font-size:28px;color:var(--acc)}
 .astat-l{font-size:12px;color:var(--mut);margin-top:4px}
+.bigc-stat{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:12px}
+.bigc-stat-sum{display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none;user-select:none}
+.bigc-stat-sum::-webkit-details-marker{display:none}
 .amem{background:var(--sur);border:1px solid var(--bdr);border-radius:10px;margin-bottom:10px;overflow:hidden}
 .amem summary{padding:12px 16px;cursor:pointer;font-weight:700;list-style:none;display:flex;align-items:center;gap:8px}
 .amem summary::-webkit-details-marker{display:none}
@@ -612,12 +615,68 @@ function htmlAdmin(){
   h+='<div class="astat"><div class="astat-n">'+bcs.length+'</div><div class="astat-l">大Ｃ數</div></div>';
   h+='</div>';
 
-  // 各大C進度
-  h+='<div class="slbl">📊 各大Ｃ完成率</div>';
+  // 各大C進度 + 任務加總統計
+  h+='<div class="slbl">📊 各大Ｃ完成率與任務加總</div>';
   bcs.forEach(function(b){
     var pct=bigCPct(b);
-    h+='<div style="margin-bottom:10px"><div style="font-size:13px;margin-bottom:4px">'+esc(b)+'　'+Math.round(pct)+'%</div>';
-    h+='<div class="pbar-track" style="height:8px"><div class="pbar-fill" style="width:'+pct+'%;background:#22d3ee"></div></div></div>';
+    var teams=teamsOf(b);
+    var allMbs=[];
+    teams.forEach(function(t){membersOf(b,t).forEach(function(m){allMbs.push({team:t,name:m});});});
+    var tasks=tasksFor(b);
+
+    // 大C層級：每個任務的總次數
+    var bigTotals={};
+    tasks.forEach(function(t){
+      bigTotals[t.key]=allMbs.reduce(function(sum,p){
+        return sum+taskCount(b,p.team,p.name,t.key);
+      },0);
+    });
+
+    h+='<details class="bigc-stat">';
+    h+='<summary class="bigc-stat-sum">';
+    h+='<span style="font-weight:700;font-size:14px">'+esc(b)+'</span>';
+    h+='<span class="cpct" style="font-size:13px">'+Math.round(pct)+'%</span>';
+    h+='</summary>';
+
+    // 進度條
+    h+='<div class="pbar-track" style="height:8px;margin:8px 0 12px">';
+    h+='<div class="pbar-fill" style="width:'+pct+'%;background:#22d3ee"></div></div>';
+
+    // 大C任務加總
+    h+='<div style="margin-bottom:12px">';
+    h+='<div class="slbl" style="font-size:11px;margin-bottom:6px">📋 全大Ｃ任務加總</div>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
+    tasks.forEach(function(t){
+      h+='<div style="background:rgba(0,0,0,.04);border:1px solid var(--bdr);border-radius:8px;padding:6px 12px;font-size:12px">';
+      h+=t.icon+' '+esc(t.name)+'<br>';
+      h+='<span style="font-family:var(--fh);font-size:16px;color:var(--acc2)">'+bigTotals[t.key]+'</span>';
+      h+='<span style="color:var(--mut);font-size:11px"> 次/天</span>';
+      h+='</div>';
+    });
+    h+='</div></div>';
+
+    // 各隊明細（可展開）
+    h+='<div class="slbl" style="font-size:11px;margin-bottom:6px">🏷️ 各隊明細</div>';
+    teams.forEach(function(t){
+      var mbs=membersOf(b,t);
+      var teamTotals={};
+      tasks.forEach(function(tk){
+        teamTotals[tk.key]=mbs.reduce(function(sum,m){
+          return sum+taskCount(b,t,m,tk.key);
+        },0);
+      });
+      h+='<div style="background:rgba(0,0,0,.03);border-radius:8px;padding:8px 12px;margin-bottom:6px">';
+      h+='<div style="font-size:12px;font-weight:700;margin-bottom:6px">'+esc(t)+'</div>';
+      h+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
+      tasks.forEach(function(tk){
+        h+='<span style="font-size:11px;color:var(--mut)">'+tk.icon+' ';
+        h+='<span style="color:var(--acc2);font-weight:700">'+teamTotals[tk.key]+'</span>';
+        h+=' '+esc(tk.name.length>6?tk.name.substring(0,6)+'..':tk.name)+'</span>';
+      });
+      h+='</div></div>';
+    });
+
+    h+='</details>';
   });
 
   // 選人員快速查看與調整（大C→隊伍→姓名）
