@@ -615,8 +615,63 @@ function htmlAdmin(){
   h+='<div class="astat"><div class="astat-n">'+bcs.length+'</div><div class="astat-l">大Ｃ數</div></div>';
   h+='</div>';
 
+  // ── 各任務平均達成比例（全體 + 可展開各大C）──
+  var globalTasks = TASKS; // 以共同四項任務計算全體（週週100BV不計分，但另外顯示）
+  var globalAll = allPeople;
+
+  // 全體每項任務的平均達成比例
+  function taskAvgPct(people, taskKey, goal){
+    if(!people.length) return 0;
+    var total = people.reduce(function(sum, p){
+      return sum + Math.min(taskCount(p.big, p.team, p.name, taskKey) / goal, 1);
+    }, 0);
+    return total / people.length * 100;
+  }
+
+  h+='<div class="slbl">📈 各任務平均達成比例</div>';
+  h+='<details class="bigc-stat" open>';
+  h+='<summary class="bigc-stat-sum"><span style="font-weight:700;font-size:14px">🌍 全體統計</span><span style="font-size:11px;color:var(--mut)">點擊展開/收合各大Ｃ</span></summary>';
+
+  // 全體表格
+  function renderTaskTable(people, label){
+    var allTasksHere = TASKS; // 四項共同任務
+    h+='<div style="margin:10px 0 8px;font-size:12px;color:var(--mut)">'+label+'</div>';
+    h+='<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:12px">';
+    h+='<thead><tr style="background:rgba(0,0,0,.05)">';
+    h+='<th style="padding:7px 10px;text-align:left;font-weight:700">行為項目</th>';
+    h+='<th style="padding:7px 10px;text-align:center;font-weight:700">平均達成</th>';
+    h+='<th style="padding:7px 10px;text-align:left;color:var(--mut);font-weight:400;font-size:11px">備註</th>';
+    h+='</tr></thead><tbody>';
+    allTasksHere.forEach(function(t){
+      var pct = taskAvgPct(people, t.key, t.goal);
+      var color = pct>=80?"#16a34a":pct>=50?"#0891b2":pct>=25?"#d97706":"#dc2626";
+      h+='<tr style="border-top:1px solid var(--bdr)">';
+      h+='<td style="padding:7px 10px">'+t.icon+' '+esc(t.name)+'</td>';
+      h+='<td style="padding:7px 10px;text-align:center;font-family:var(--fh);font-size:15px;font-weight:700;color:'+color+'">'+Math.round(pct)+'%</td>';
+      h+='<td style="padding:7px 10px;font-size:11px;color:var(--mut)">目標'+t.goal+t.unit+'計算</td>';
+      h+='</tr>';
+    });
+    h+='</tbody></table>';
+  }
+
+  renderTaskTable(globalAll, "共 "+globalAll.length+" 人");
+
+  // 各大C展開
+  bcs.forEach(function(b){
+    var bigPeople = [];
+    teamsOf(b).forEach(function(t){
+      membersOf(b,t).forEach(function(m){ bigPeople.push({big:b,team:t,name:m}); });
+    });
+    h+='<details style="margin-bottom:8px">';
+    h+='<summary style="cursor:pointer;font-size:13px;font-weight:700;padding:6px 0;list-style:none">▶ '+esc(b)+'（'+bigPeople.length+' 人）</summary>';
+    renderTaskTable(bigPeople, esc(b)+" 共 "+bigPeople.length+" 人");
+    h+='</details>';
+  });
+
+  h+='</details>';
+
   // 各大C進度 + 任務加總統計
-  h+='<div class="slbl">📊 各大Ｃ完成率與任務加總</div>';
+  h+='<div class="slbl" style="margin-top:20px">📊 各大Ｃ完成率與任務加總</div>';
   bcs.forEach(function(b){
     var pct=bigCPct(b);
     var teams=teamsOf(b);
